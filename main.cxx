@@ -108,7 +108,7 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
   vector<tuple<K, K, V>> deletions;
   vector<tuple<K, K, V>> insertions;
   // Get community memberships on original graph (static).
-  auto b0 = leidenStaticOmp(x, {5});
+  auto b0 = leidenStaticOmp(rnd, x, {5});
   glog(b0, "leidenStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   auto BM2 = b0.membership;
   auto BV2 = b0.vertexWeight;

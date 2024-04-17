@@ -1556,6 +1556,7 @@ inline auto leidenAffectedVerticesDeltaScreeningW(vector<B>& vertices, vector<B>
   fillValueU(vertices,    B());
   fillValueU(neighbors,   B());
   fillValueU(communities, B());
+  xorshift32_engine rng(0);
   for (const auto& [u, v] : deletions) {
     if (vcom[u] != vcom[v]) continue;
     vertices[u]  = 1;
@@ -1571,7 +1572,7 @@ inline auto leidenAffectedVerticesDeltaScreeningW(vector<B>& vertices, vector<B>
       if (vcom[u] == vcom[v]) continue;
       leidenScanCommunityW(vcs, vcout, u, v, w, vcom);
     }
-    auto [c, e] = leidenChooseCommunity(y, u, vcom, vtot, ctot, vcs, vcout, M, R);
+    auto [c, e] = leidenChooseCommunity(rng, y, u, vcom, vtot, ctot, vcs, vcout, M, R);
     if (e<=0) continue;
     vertices[u]  = 1;
     neighbors[u] = 1;
@@ -1609,6 +1610,7 @@ inline auto leidenAffectedVerticesDeltaScreeningOmpW(vector<B>& vertices, vector
   fillValueOmpU(vertices,    B());
   fillValueOmpU(neighbors,   B());
   fillValueOmpU(communities, B());
+  xorshift32_engine rng(0);
   #pragma omp parallel for schedule(auto)
   for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
@@ -1634,7 +1636,7 @@ inline auto leidenAffectedVerticesDeltaScreeningOmpW(vector<B>& vertices, vector
         if (vcom[u] == vcom[v]) continue;
         leidenScanCommunityW(*vcs[t], *vcout[t], u, v, w, vcom);
       }
-      auto [c, e] = leidenChooseCommunity(y, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
+      auto [c, e] = leidenChooseCommunity(rng, y, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
       if (e<=0) continue;
       vertices[u]  = 1;
       neighbors[u] = 1;
