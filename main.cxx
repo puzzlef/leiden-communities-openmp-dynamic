@@ -40,7 +40,21 @@ using namespace std;
 /**
  * Obtain the modularity of community structure on a graph.
  * @param x original graph
- * @param a rak result
+ * @param a louvain result
+ * @param M sum of edge weights
+ * @returns modularity
+ */
+template <class G, class K>
+inline double getModularity(const G& x, const LouvainResult<K>& a, double M) {
+  auto fc = [&](auto u) { return a.membership[u]; };
+  return modularityBy(x, fc, M, 1.0);
+}
+
+
+/**
+ * Obtain the modularity of community structure on a graph.
+ * @param x original graph
+ * @param a leiden result
  * @param M sum of edge weights
  * @returns modularity
  */
@@ -108,6 +122,8 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
   vector<tuple<K, K, V>> deletions;
   vector<tuple<K, K, V>> insertions;
   // Get community memberships on original graph (static).
+  auto c0 = louvainStaticOmp(x, {5});
+  glog(c0, "louvainStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   auto b0 = leidenStaticOmp(rnd, x, {5});
   glog(b0, "leidenStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   auto BM2 = b0.membership;
