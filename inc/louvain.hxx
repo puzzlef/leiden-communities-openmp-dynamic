@@ -1080,10 +1080,10 @@ inline auto louvainInvoke(const G& x, const LouvainOptions& o, FI fi, FM fm, FA 
         else         louvainRenumberCommunitiesW(vcom, cv.degrees, y);
         if (isFirst) {}
         else         louvainLookupCommunitiesU(ucom, vcom);
-        cv.respan(CN); z.respan(CN);
-        if (isFirst) louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, x, ucom);
-        else         louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, y, vcom);
         ta += measureDuration([&]() {
+          cv.respan(CN); z.respan(CN);
+          if (isFirst) louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, x, ucom);
+          else         louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, y, vcom);
           if (isFirst) louvainAggregateW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
           else         louvainAggregateW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });
@@ -1194,10 +1194,10 @@ inline auto louvainInvokeOmp(const G& x, const LouvainOptions& o, FI fi, FM fm, 
         else         louvainRenumberCommunitiesOmpW(vcom, cv.degrees, bufk, y);
         if (isFirst) {}
         else         louvainLookupCommunitiesOmpU(ucom, vcom);
-        cv.respan(CN); z.respan(CN);
-        if (isFirst) louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
-        else         louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
         ta += measureDuration([&]() {
+          cv.respan(CN); z.respan(CN);
+          if (isFirst) louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
+          else         louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
           if (isFirst) louvainAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
           else         louvainAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });

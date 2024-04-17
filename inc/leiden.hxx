@@ -1356,10 +1356,10 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         else         leidenRenumberCommunitiesOmpW(vcom, cv.degrees, bufk, y);
         if (isFirst) {}
         else         leidenLookupCommunitiesOmpU(ucom, vcom);
-        cv.respan(CN); z.respan(CN);
-        if (isFirst) leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
-        else         leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
         ta += measureDuration([&]() {
+          cv.respan(CN); z.respan(CN);
+          if (isFirst) leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
+          else         leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
           if (isFirst) leidenAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
           else         leidenAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });
