@@ -11,7 +11,7 @@
  * @param x input graph
  */
 template <class H, class G>
-inline void symmetricizeW(H& a, const G& x) {
+inline void symmetrizeW(H& a, const G& x) {
   a.reserve(x.span());
   x.forEachVertex([&](auto u, auto d) { a.addVertex(u, d); });
   x.forEachVertexKey([&](auto u) {
@@ -30,7 +30,7 @@ inline void symmetricizeW(H& a, const G& x) {
  * @param x input graph
  */
 template <class H, class G>
-inline void symmetricizeOmpW(H& a, const G& x) {
+inline void symmetrizeOmpW(H& a, const G& x) {
   a.reserve(x.span());
   x.forEachVertex([&](auto u, auto d) { a.addVertex(u, d); });
   #pragma omp parallel
@@ -53,7 +53,7 @@ inline void symmetricizeOmpW(H& a, const G& x) {
  * @return symmetric graph
  */
 template <class G>
-inline auto symmetricize(const G& x) {
+inline auto symmetrize(const G& x) {
   G a = x;
   x.forEachVertexKey([&](auto u) {
     x.forEachEdge(u, [&](auto v, auto w) { a.addEdge(v, u, w); });
@@ -69,7 +69,7 @@ inline auto symmetricize(const G& x) {
  * @return symmetric graph
  */
 template <class G>
-inline auto symmetricizeOmp(const G& x) {
+inline auto symmetrizeOmp(const G& x) {
   G a = x;
   #pragma omp parallel
   {
