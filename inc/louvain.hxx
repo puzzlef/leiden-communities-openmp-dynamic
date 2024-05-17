@@ -57,7 +57,7 @@ struct LouvainOptions {
    * @param maxIterations maximum number of iterations per pass [20]
    * @param maxPasses maximum number of passes [10]
    */
-  LouvainOptions(int repeat=1, double resolution=1, double tolerance=1e-2, double aggregationTolerance=0.8, double toleranceDrop=10, int maxIterations=20, int maxPasses=10) :
+  LouvainOptions(int repeat=1, double resolution=1, double tolerance=1e-2, double aggregationTolerance=1.0, double toleranceDrop=10, int maxIterations=20, int maxPasses=10) :
   repeat(repeat), resolution(resolution), tolerance(tolerance), aggregationTolerance(aggregationTolerance), toleranceDrop(toleranceDrop), maxIterations(maxIterations), maxPasses(maxPasses) {}
   #pragma endregion
 };
