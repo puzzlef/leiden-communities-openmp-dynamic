@@ -1415,7 +1415,7 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
           else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
         l += max(m, 1); ++p;
-        if (m<=1 || p>=P) break;
+        if (!isFirst && (m<=1 || p>=P)) break;
         size_t GN = isFirst? x.order() : y.order();
         size_t GS = isFirst? x.span()  : y.span();
         size_t CN = 0;
