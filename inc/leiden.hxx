@@ -1601,7 +1601,7 @@ inline auto leidenNaiveDynamicOmp(RND& rnd, const G& y, const vector<tuple<K, K,
     fillValueOmpU(vaff, FLAG(1));
   };
   auto fa = [ ](auto u) { return true; };
-  return leidenInvokeOmp<true, USEPARENT, RANDOM, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
@@ -1764,7 +1764,7 @@ inline auto leidenDynamicDeltaScreening(RND& rnd, const G& y, const vector<tuple
     copyValuesW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
-  return leidenInvoke<true, USEPARENT, RANDOM, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvoke<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 
 
@@ -1804,7 +1804,7 @@ inline auto leidenDynamicDeltaScreeningOmp(RND& rnd, const G& y, const vector<tu
     copyValuesOmpW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
-  return leidenInvokeOmp<true, USEPARENT, RANDOM, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
@@ -1898,7 +1898,7 @@ inline auto leidenDynamicFrontier(RND& rnd, const G& y, const vector<tuple<K, K,
     leidenAffectedVerticesFrontierW(vaff, y, deletions, insertions, vcom);
   };
   auto fa = [ ](auto u) { return true; };
-  return leidenInvoke<true, USEPARENT, RANDOM, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvoke<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 
 
@@ -1931,7 +1931,7 @@ inline auto leidenDynamicFrontierOmp(RND& rnd, const G& y, const vector<tuple<K,
     leidenAffectedVerticesFrontierOmpW(vaff, y, deletions, insertions, vcom);
   };
   auto fa = [ ](auto u) { return true; };
-  return leidenInvokeOmp<true, USEPARENT, RANDOM, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
