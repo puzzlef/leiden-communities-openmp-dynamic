@@ -2019,7 +2019,7 @@ inline auto leidenDynamicFrontier(RND& rnd, const G& y, const vector<tuple<K, K,
     leidenAffectedVerticesFrontierW(vaff, y, deletions, insertions, vcom);
   };
   auto fa = [ ](auto u) { return true; };
-  auto ft = [ ](auto& cchg, auto c) { cchg[c] = B(1); };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
   auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvoke<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
@@ -2054,7 +2054,7 @@ inline auto leidenDynamicFrontierOmp(RND& rnd, const G& y, const vector<tuple<K,
     leidenAffectedVerticesFrontierOmpW(vaff, y, deletions, insertions, vcom);
   };
   auto fa = [ ](auto u) { return true; };
-  auto ft = [ ](auto& cchg, auto c) { cchg[c] = B(1); };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
   auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
