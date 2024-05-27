@@ -1369,8 +1369,8 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
         });
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
-          if (isFirst) copyValuesW(vcob, ucom);
-          else         copyValuesW(vcob, vcom);
+          if (isFirst) copyValuesW(vcob.data(), ucom.data(), x.span());
+          else         copyValuesW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeW(ucom, ctot, x, utot, fr);
           else         leidenInitializeW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueU(vaff.data(), x.order(), B(1));
@@ -1514,8 +1514,8 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         });
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
-          if (isFirst) copyValuesOmpW(vcob, ucom);
-          else         copyValuesOmpW(vcob, vcom);
+          if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
+          else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeOmpW(ucom, ctot, x, utot, fr);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
