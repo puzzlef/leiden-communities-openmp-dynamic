@@ -1681,8 +1681,8 @@ inline auto leidenNaiveDynamic(RND& rnd, const G& y, const vector<tuple<K, K, V>
     fillValueU(vaff, FLAG(1));
   };
   auto fa = [ ](auto u) { return true; };
-  auto ft = [ ](auto& cchg, auto c) {};
-  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
+  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvoke<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
 
@@ -1716,8 +1716,8 @@ inline auto leidenNaiveDynamicOmp(RND& rnd, const G& y, const vector<tuple<K, K,
     fillValueOmpU(vaff, FLAG(1));
   };
   auto fa = [ ](auto u) { return true; };
-  auto ft = [ ](auto& cchg, auto c) {};
-  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
+  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
 #endif
@@ -1881,8 +1881,8 @@ inline auto leidenDynamicDeltaScreening(RND& rnd, const G& y, const vector<tuple
     copyValuesW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
-  auto ft = [ ](auto& cchg, auto c) {};
-  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
+  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvoke<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
 
@@ -1923,8 +1923,8 @@ inline auto leidenDynamicDeltaScreeningOmp(RND& rnd, const G& y, const vector<tu
     copyValuesOmpW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
-  auto ft = [ ](auto& cchg, auto c) {};
-  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
+  auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
+  auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
 }
 #endif
