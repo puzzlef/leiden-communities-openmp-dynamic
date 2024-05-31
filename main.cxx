@@ -225,17 +225,201 @@ void runExperiment(const G& x) {
         glog(ans, technique, numThreads, y, M, deletionsf, insertionsf);
       };
       // Find static Leiden.
-      auto b1 = leidenStaticOmp(rnd, y, {repeat});
-      flog(b1, "leidenStaticOmp");
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 1>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp1");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 2>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp2");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 4>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp4");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 8>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp8");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 16>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp16");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 32>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp32");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 64>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp64");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 128>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp128");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 256>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp256");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 512>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp512");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 1024>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp1024");
+      }
+      {
+        auto b1 = leidenStaticOmp<false, false, char, 2048>(rnd, y, {repeat});
+        flog(b1, "leidenStaticOmp2048");
+      }
       // Find naive-dynamic Leiden.
-      auto b2 = leidenNaiveDynamicOmp(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
-      flog(b2, "leidenNaiveDynamicOmp");
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 1>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp1");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 2>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp2");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 4>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp4");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 8>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp8");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 16>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp16");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 32>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp32");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 64>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp64");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 128>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp128");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 256>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp256");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 512>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp512");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 1024>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp1024");
+      }
+      {
+        auto b2 = leidenNaiveDynamicOmp<false, false, char, 2048>(rnd, y, deletions, insertions, B2, VW, CW, {repeat});
+        flog(b2, "leidenNaiveDynamicOmp2048");
+      }
       // Find delta-screening based dynamic Leiden.
-      auto b3 = leidenDynamicDeltaScreeningOmp(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
-      flog(b3, "leidenDynamicDeltaScreeningOmp");
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 1>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp1");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 2>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp2");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 4>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp4");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 8>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp8");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 16>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp16");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 32>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp32");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 64>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp64");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 128>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp128");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 256>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp256");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 512>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp512");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 1024>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp1024");
+      }
+      {
+        auto b3 = leidenDynamicDeltaScreeningOmp<false, false, char, 2048>(rnd, y, deletions, insertions, B3, VW, CW, {repeat});
+        flog(b3, "leidenDynamicDeltaScreeningOmp2048");
+      }
       // Find frontier based dynamic Leiden.
-      auto b4 = leidenDynamicFrontierOmp(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
-      flog(b4, "leidenDynamicFrontierOmp");
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 1>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp1");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 2>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp2");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 4>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp4");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 8>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp8");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 16>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp16");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 32>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp32");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 64>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp64");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 128>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp128");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 256>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp256");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 512>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp512");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 1024>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp1024");
+      }
+      {
+        auto b4 = leidenDynamicFrontierOmp<false, false, char, 2048>(rnd, y, deletions, insertions, B4, VW, CW, {repeat});
+        flog(b4, "leidenDynamicFrontierOmp2048");
+      }
       #if BATCH_LENGTH>1
       B2 = b2.membership;
       B3 = b3.membership;
