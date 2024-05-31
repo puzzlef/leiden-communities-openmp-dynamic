@@ -1179,11 +1179,11 @@ inline void leidenAggregateEdgesW(vector<K>& ydeg, vector<K>& yedg, vector<W>& y
  * @param cedg vertices belonging to each community
  * @param yoff offsets for vertices belonging to each community
  */
-template <class G, class K, class W>
+template <int CHUNK_SIZE=2048, class G, class K, class W>
 inline void leidenAggregateEdgesOmpW(vector<K>& ydeg, vector<K>& yedg, vector<W>& ywei, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, const G& x, const vector<K>& vcom, const vector<K>& coff, const vector<K>& cedg, const vector<size_t>& yoff) {
   size_t C = coff.size() - 1;
   fillValueOmpU(ydeg, K());
-  #pragma omp parallel for schedule(dynamic, 2048)
+  #pragma omp parallel for schedule(dynamic, CHUNK_SIZE)
   for (K c=0; c<C; ++c) {
     int t = omp_get_thread_num();
     K   n = csrDegree(coff, c);
@@ -1269,12 +1269,12 @@ inline void leidenAggregateW(vector<size_t>& yoff, vector<K>& ydeg, vector<K>& y
  * @param coff offsets for vertices belonging to each community
  * @param cedg vertices belonging to each community
  */
-template <class G, class K, class W>
+template <int CHUNK_SIZE=2048, class G, class K, class W>
 inline void leidenAggregateOmpW(vector<size_t>& yoff, vector<K>& ydeg, vector<K>& yedg, vector<W>& ywei, vector<size_t>& bufs, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, const G& x, const vector<K>& vcom, vector<K>& coff, vector<K>& cedg) {
   size_t C = coff.size() - 1;
   leidenCommunityTotalDegreeOmpW(yoff, x, vcom);
   yoff[C] = exclusiveScanOmpW(yoff.data(), bufs.data(), yoff.data(), C);
-  leidenAggregateEdgesOmpW(ydeg, yedg, ywei, vcs, vcout, x, vcom, coff, cedg, yoff);
+  leidenAggregateEdgesOmpW<CHUNK_SIZE>(ydeg, yedg, ywei, vcs, vcout, x, vcom, coff, cedg, yoff);
 }
 #endif
 #pragma endregion
@@ -1436,7 +1436,7 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
  * @param fs is vertex in the subset to be refined? (cchg, vcob, u)
  * @returns leiden result
  */
-template <bool DYNAMIC=false, bool RANDOM=false, bool USEPARENT=false, class FLAG=char, class RND, class G, class FI, class FM, class FA, class FT, class FS>
+template <bool DYNAMIC=false, bool RANDOM=false, bool USEPARENT=false, class FLAG=char, int CHUNK_SIZE=2048, class RND, class G, class FI, class FM, class FA, class FT, class FS>
 inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM fm, FA fa, FT ft, FS fs) {
   using  K = typename G::key_type;
   using  W = LEIDEN_WEIGHT_TYPE;
@@ -1543,8 +1543,8 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
           cv.respan(CN); z.respan(CN);
           if (isFirst) leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
           else         leidenCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
-          if (isFirst) leidenAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
-          else         leidenAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
+          if (isFirst) leidenAggregateOmpW<CHUNK_SIZE>(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
+          else         leidenAggregateOmpW<CHUNK_SIZE>(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });
         swap(y, z);
         // fillValueOmpU(vcob.data(), CN, K());
@@ -2053,10 +2053,11 @@ inline auto leidenDynamicFrontierOmp(RND& rnd, const G& y, const vector<tuple<K,
   auto fm = [&](auto& vaff, auto& vcs, auto& vcout, const auto& vcom, const auto& vtot, const auto& ctot) {
     leidenAffectedVerticesFrontierOmpW(vaff, y, deletions, insertions, vcom);
   };
+  constexpr int CHUNK_SIZE = 32;
   auto fa = [ ](auto u) { return true; };
   auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
   auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
-  return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
+  return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG, CHUNK_SIZE>(rnd, y, o, fi, fm, fa, ft, fs);
 }
 #endif
 #pragma endregion
