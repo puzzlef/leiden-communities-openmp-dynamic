@@ -9,7 +9,7 @@ if [[ "$DOWNLOAD" != "0" ]]; then
   rm -rf $src
   git clone https://github.com/puzzlef/$src
   cd $src
-  git checkout input-large
+  git checkout strong-scaling-large
 fi
 
 # Fixed config
@@ -28,7 +28,7 @@ fi
 : "${BATCH_INSERTIONS_STEP:=*=10}"
 # Parameter sweep for number of threads
 : "${NUM_THREADS_MODE:=all}"
-: "${NUM_THREADS_BEGIN:=64}"
+: "${NUM_THREADS_BEGIN:=1}"
 : "${NUM_THREADS_END:=64}"
 : "${NUM_THREADS_STEP:=*=2}"
 # Define macros (dont forget to add here)
