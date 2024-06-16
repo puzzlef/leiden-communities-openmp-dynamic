@@ -9,7 +9,7 @@ if [[ "$DOWNLOAD" != "0" ]]; then
   rm -rf $src
   git clone https://github.com/puzzlef/$src
   cd $src
-  git checkout input-temporal
+  git checkout measure-affected-temporal
 fi
 
 # Fixed config
@@ -20,11 +20,11 @@ fi
 # Parameter sweep for batch (randomly generated)
 : "${BATCH_UNIT:=%}"
 : "${BATCH_LENGTH:=100}"
-: "${BATCH_DELETIONS_BEGIN:=0.00000005}"
-: "${BATCH_DELETIONS_END:=0.05}"
+: "${BATCH_DELETIONS_BEGIN:=0.00000002}"
+: "${BATCH_DELETIONS_END:=0.02}"
 : "${BATCH_DELETIONS_STEP:=*=10}"
-: "${BATCH_INSERTIONS_BEGIN:=0.00000005}"
-: "${BATCH_INSERTIONS_END:=0.05}"
+: "${BATCH_INSERTIONS_BEGIN:=0.00000008}"
+: "${BATCH_INSERTIONS_END:=0.08}"
 : "${BATCH_INSERTIONS_STEP:=*=10}"
 # Parameter sweep for number of threads
 : "${NUM_THREADS_MODE:=all}"

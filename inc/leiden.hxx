@@ -683,6 +683,7 @@ inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G&
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generator
@@ -698,7 +699,7 @@ inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G&
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC, class FA, class FB>
-inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa, FB fb) {
+inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa, FB fb) {
   int l = 0;
   W  el = W();
   for (; l<L;) {
@@ -714,7 +715,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
       if (c) {
         leidenChangeCommunityW(vcom, ctot, x, u, c, vtot);
         if (!REFINE) { fb(d); fb(c); }
-        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
+        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); vaffor[v] = B(1); });
       }
       if (!REFINE) vaff[u] = B();
       el += e;  // l1-norm
@@ -730,6 +731,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generator
@@ -744,9 +746,9 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC, class FA>
-inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa) {
+inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa) {
   auto fb = [](auto u) {};
-  return leidenMoveW<REFINE, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
+  return leidenMoveW<REFINE, RANDOM>(vcom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
 }
 
 
@@ -755,6 +757,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generator
@@ -768,10 +771,10 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC>
-inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc) {
+inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc) {
   auto fa = [](auto u) { return true; };
   auto fb = [](auto u) {};
-  return leidenMoveW<REFINE, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
+  return leidenMoveW<REFINE, RANDOM>(vcom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
 }
 
 
@@ -781,6 +784,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generators
@@ -796,7 +800,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC, class FA, class FB>
-inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa, FB fb) {
+inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa, FB fb) {
   size_t S = x.span();
   int l = 0;
   W  el = W();
@@ -815,7 +819,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(*rng[t], x, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
       if (c && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
         if (!REFINE) { fb(d); fb(c); }
-        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
+        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); vaffor[v] = B(1); });
       }
       if (!REFINE) vaff[u] = B();
       el += e;  // l1-norm
@@ -831,6 +835,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generators
@@ -845,9 +850,9 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC, class FA>
-inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa) {
+inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa) {
   auto fb = [](auto u) {};
-  return leidenMoveOmpW<REFINE, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
+  return leidenMoveOmpW<REFINE, RANDOM>(vcom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
 }
 
 
@@ -856,6 +861,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
  * @param vcom community each vertex belongs to (initial, updated)
  * @param ctot total edge weight of each community (precalculated, updated)
  * @param vaff is vertex affected flag (updated)
+ * @param vaffor is vertex affected OR flag (updated)
  * @param vcs communities vertex u is linked to (temporary buffer, updated)
  * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
  * @param rng random number generators
@@ -869,10 +875,10 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
  * @returns iterations performed (0 if converged already)
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC>
-inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc) {
+inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<B>& vaffor, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, vector<xorshift32_engine*>& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc) {
   auto fa = [](auto u) { return true; };
   auto fb = [](auto u) {};
-  return leidenMoveOmpW<REFINE, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
+  return leidenMoveOmpW<REFINE, RANDOM>(vcom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, vtot, M, R, L, fc, fa, fb);
 }
 #endif
 #pragma endregion
@@ -1310,6 +1316,7 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
   double M = edgeWeight(x)/2;
   // Allocate buffers.
   vector<B> vaff(S);        // Affected vertex flag (any pass)
+  vector<B> vaffor(S);      // Affected vertex OR flag (any pass)
   vector<B> cchg(S);        // Community changed flag (first pass)
   vector<K> ucom, vcom(S);  // Community membership (first pass, current pass)
   vector<K> vcob(S);        // Community bound (any pass)
@@ -1336,6 +1343,7 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
     auto   fc = [&](double el, int l) { return el<=E; };
     // Reset buffers, in case of multiple runs.
     fillValueU(vaff, B());
+    fillValueU(vaffor, B());
     fillValueU(cchg, B());
     fillValueU(ucom, K());
     fillValueU(vcom, K());
@@ -1353,6 +1361,7 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
       ti += measureDuration([&]() { fi(ucom, utot, ctot); });
       // Mark affected vertices.
       tm += measureDuration([&]() { fm(vaff, vcs, vcout, ucom, utot, ctot); });
+      copyValuesW(vaffor, vaff);
       // Start timing first pass.
       auto t0 = timeNow(), t1 = t0;
       // Start local-moving, refinement, aggregation phases.
@@ -1364,8 +1373,8 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
         int m = 0;
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { return ft(cchg, c); };
-          if (isFirst) m += leidenMoveW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
-          else         m += leidenMoveW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (isFirst) m += leidenMoveW<false, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
+          else         m += leidenMoveW<false, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
@@ -1375,8 +1384,8 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
           else         leidenInitializeW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueU(vaff.data(), x.order(), B(1));
           // else         fillValueU(vaff.data(), y.order(), B(1));
-          if (isFirst) m += leidenMoveW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
-          else         m += leidenMoveW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (isFirst) m += leidenMoveW<true, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
+          else         m += leidenMoveW<true, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
         l += max(m, 1); ++p;
         if (m<=1 || p>=P) break;
@@ -1419,7 +1428,7 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
     });
   }, o.repeat);
   leidenFreeRngsW(rng);
-  return LeidenResult<K>(ucom, utot, ctot, l, p, t, tm/o.repeat, ti/o.repeat, tp/o.repeat, tl/o.repeat, tr/o.repeat, ta/o.repeat, countValue(vaff, B(1)));
+  return LeidenResult<K>(ucom, utot, ctot, l, p, t, tm/o.repeat, ti/o.repeat, tp/o.repeat, tl/o.repeat, tr/o.repeat, ta/o.repeat, countValue(vaffor, B(1)));
 }
 
 
@@ -1452,6 +1461,7 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
   // Allocate buffers.
   int    T = omp_get_max_threads();
   vector<B> vaff(S);        // Affected vertex flag (any pass)
+  vector<B> vaffor(S);      // Affected vertex OR flag (any pass)
   vector<B> cchg(S);        // Community changed flag (first pass)
   vector<K> ucom, vcom(S);  // Community membership (first pass, current pass)
   vector<K> vcob(S);        // Community bound (any pass)
@@ -1481,6 +1491,7 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
     auto   fc = [&](double el, int l) { return el<=E; };
     // Reset buffers, in case of multiple runs.
     fillValueOmpU(vaff, B());
+    fillValueOmpU(vaffor, B());
     fillValueOmpU(cchg, B());
     fillValueOmpU(ucom, K());
     fillValueOmpU(vcom, K());
@@ -1498,6 +1509,7 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
       ti += measureDuration([&]() { fi(ucom, utot, ctot); });
       // Mark affected vertices.
       tm += measureDuration([&]() { fm(vaff, vcs, vcout, ucom, utot, ctot); });
+      copyValuesOmpW(vaffor, vaff);
       // Start timing first pass.
       auto t0 = timeNow(), t1 = t0;
       // Start local-moving, refinement, aggregation phases.
@@ -1509,8 +1521,8 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         int m = 0;
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { return ft(cchg, c); };
-          if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
-          else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
+          else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
@@ -1520,8 +1532,8 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
-          if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
-          else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
+          else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
         l += max(m, 1); ++p;
         if (!isFirst && (m<=1 || p>=P)) break;
@@ -1565,7 +1577,7 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
   }, o.repeat);
   leidenFreeHashtablesW(vcs, vcout);
   leidenFreeRngsW(rng);
-  return LeidenResult<K>(ucom, utot, ctot, l, p, t, tm/o.repeat, ti/o.repeat, tp/o.repeat, tl/o.repeat, tr/o.repeat, ta/o.repeat, countValueOmp(vaff, B(1)));
+  return LeidenResult<K>(ucom, utot, ctot, l, p, t, tm/o.repeat, ti/o.repeat, tp/o.repeat, tl/o.repeat, tr/o.repeat, ta/o.repeat, countValueOmp(vaffor, B(1)));
 }
 #endif
 #pragma endregion

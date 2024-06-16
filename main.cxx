@@ -113,10 +113,12 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
   auto glog = [&](const auto& ans, const char *technique, int numThreads, const auto& y, auto M, auto deletionsf, auto insertionsf) {
     printf(
       "{-%.3e/+%.3e batchf, %03d threads} -> "
-      "{%09.1fms, %09.1fms mark, %09.1fms init, %09.1fms firstpass, %09.1fms locmove, %09.1fms refine, %09.1fms aggr, %.3e aff, %04d iters, %03d passes, %01.9f modularity} %s\n",
+      "{%09.1fms, %09.1fms mark, %09.1fms init, %09.1fms firstpass, %09.1fms locmove, %09.1fms refine, %09.1fms aggr, %.3e aff, %04d iters, %03d passes, %01.9f modularity, %zu/%zu disconnected} %s\n",
       double(deletionsf), double(insertionsf), numThreads,
       ans.time, ans.markingTime, ans.initializationTime, ans.firstPassTime, ans.localMoveTime, refinementTime(ans), ans.aggregationTime,
-      double(ans.affectedVertices), ans.iterations, ans.passes, getModularity(y, ans, M), technique
+      double(ans.affectedVertices), ans.iterations, ans.passes, getModularity(y, ans, M),
+      countValue(communitiesDisconnectedOmp(y, ans.membership), char(1)),
+      communities(y, ans.membership).size(), technique
     );
   };
   vector<tuple<K, K, V>> deletions;
