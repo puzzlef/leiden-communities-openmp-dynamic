@@ -156,8 +156,10 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
     auto b1 = leidenStaticOmp(rnd, y, {repeat});
     flog(b1, "leidenStaticOmp");
     // Find naive-dynamic Leiden.
+    omp_set_num_threads(1);
     auto b2 = leidenNaiveDynamicOmp(rnd, y, deletions, insertions, BM2, BV2, BC2, {repeat});
     flog(b2, "leidenNaiveDynamicOmp");
+    omp_set_num_threads(MAX_THREADS);
     // Find delta-screening based dynamic Leiden.
     auto b3 = leidenDynamicDeltaScreeningOmp(rnd, y, deletions, insertions, BM3, BV3, BC3, {repeat});
     flog(b3, "leidenDynamicDeltaScreeningOmp");

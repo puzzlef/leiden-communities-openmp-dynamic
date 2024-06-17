@@ -393,7 +393,10 @@ inline vector<char> communitiesDisconnectedOmp(const G& x, const vector<K>& vcom
       auto fp = [&](auto v, auto d) { ++reached; };
       us[t].clear(); vs[t].clear(); us[t].push_back(u);
       bfsVisitedForEachU(vis, us[t], vs[t], x, ft, fp);
-      if (reached < coms[c]) a[c] = 1;
+      if (reached < coms[c]) {
+        // printf("Community %d is disconnected\n", c);
+        a[c] = 1;
+      }
       coms[c] = 0;
     }
   }

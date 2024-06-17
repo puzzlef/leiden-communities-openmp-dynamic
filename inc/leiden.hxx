@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 #include <utility>
 #include <tuple>
 #include <vector>
@@ -12,6 +13,7 @@
 #include <omp.h>
 #endif
 
+using std::numeric_limits;
 using std::tuple;
 using std::vector;
 using std::uniform_int_distribution;
@@ -817,6 +819,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
       leidenClearScanW(*vcs[t], *vcout[t]);
       leidenScanCommunitiesW<false, REFINE>(*vcs[t], *vcout[t], x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(*rng[t], x, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
+      if ( REFINE && ctot[vcom[u]]>vtot[u]) continue;
       if (c && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); vaffor[v] = B(1); });
@@ -1010,6 +1013,46 @@ inline void leidenCommunityTotalDegreeOmpW(vector<A>& a, const G& x, const vecto
     K c = vcom[u];
     #pragma omp atomic
     a[c] += x.degree(u);
+  }
+}
+#endif
+
+
+
+
+#ifdef OPENMP
+template <class T>
+inline void atomicMin(T *a, T val) {
+  T old = *a;
+  while (val < old && !__atomic_compare_exchange_n(a, &old, val, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST));
+}
+
+
+/**
+ * Find the minimum vertex in each community.
+ * @param a minimum vertex in each community (updated)
+ * @param x original graph
+ * @param vcom community each vertex belongs to
+ */
+template <class G, class K>
+inline void leidenCommunityMinVertexOmpW(vector<K>& a, const G& x, const vector<K>& vcom) {
+  size_t S = x.span();
+  #pragma omp parallel for schedule(static, 2048)
+  for (K u=0; u<S; ++u)
+    a[u] = vcom[u];
+  #pragma omp parallel for schedule(static, 2048)
+  for (K u=0; u<S; ++u) {
+    if (!x.hasVertex(u)) continue;
+    K c  = vcom[u];
+    atomicMin(&a[c], u);
+    // #pragma omp atomic compare
+    // a[c] = a[c] < u? a[c] : u;
+    // K ac = a[c];
+    // if (ac < u) __atomic_compare_exchange(&a[c], &ac, &u, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    // #pragma omp atomic compare
+    // {
+    //   a[c] = a[c] < u? a[c] : u;
+    // }
   }
 }
 #endif
@@ -1510,6 +1553,10 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
       // Mark affected vertices.
       tm += measureDuration([&]() { fm(vaff, vcs, vcout, ucom, utot, ctot); });
       copyValuesOmpW(vaffor, vaff);
+      // DEBUG:
+      size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+      size_t C  = communities(x, ucom).size();
+      printf("Disconnected: %zu, Communities: %zu (BEGIN)\n", DC, C);
       // Start timing first pass.
       auto t0 = timeNow(), t1 = t0;
       // Start local-moving, refinement, aggregation phases.
@@ -1524,17 +1571,52 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
           if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
           else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (isFirst) {
+          // DEBUG:
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t AC = countValue(cchg, char(1));
+          size_t C  = communities(x, ucom).size();
+          size_t AV = 0;
+          for (K u=0; u<S; ++u) {
+            if (cchg[ucom[u]]) ++AV;
+          }
+          printf("Disconnected: %zu, Communities: %zu (%zu V) / %zu (p=%d; BEFORE REFINE)\n", DC, AC, AV, C, p+1);
+          for (K u=0; u<S; ++u) {
+            if (!cchg[u]) continue;
+            printf("Community %d has been marked\n", u);
+          }
+        }
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
-          if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
+          // auto fr = [](auto u) { return true; };
+          // if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
+          if (isFirst) leidenCommunityMinVertexOmpW(vcob, x, ucom);
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
+          if (isFirst) {
+            // DEBUG:
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("Disconnected: %zu, Communities: %zu (p=%d; AFTER MIN VERTEX)\n", DC, C, p+1);
+          }
           if (isFirst) leidenInitializeOmpW(ucom, ctot, x, utot, fr);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
+          if (isFirst) {
+            // DEBUG:
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("Disconnected: %zu, Communities: %zu (p=%d; JUST TO REFINE)\n", DC, C, p+1);
+          }
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vaffor, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
           else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vaff,   vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (isFirst) {
+          // DEBUG:
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("Disconnected: %zu, Communities: %zu (p=%d; AFTER REFINE)\n", DC, C, p+1);
+        }
         l += max(m, 1); ++p;
         if (!isFirst && (m<=1 || p>=P)) break;
         size_t GN = isFirst? x.order() : y.order();
@@ -1577,6 +1659,10 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
   }, o.repeat);
   leidenFreeHashtablesW(vcs, vcout);
   leidenFreeRngsW(rng);
+  // DEBUG:
+  size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+  size_t C  = communities(x, ucom).size();
+  printf("Disconnected: %zu, Communities: %zu (END)\n", DC, C);
   return LeidenResult<K>(ucom, utot, ctot, l, p, t, tm/o.repeat, ti/o.repeat, tp/o.repeat, tl/o.repeat, tr/o.repeat, ta/o.repeat, countValueOmp(vaffor, B(1)));
 }
 #endif
@@ -1728,6 +1814,8 @@ inline auto leidenNaiveDynamicOmp(RND& rnd, const G& y, const vector<tuple<K, K,
     fillValueOmpU(vaff, FLAG(1));
   };
   auto fa = [ ](auto u) { return true; };
+  // auto ft = [ ](auto& cchg, auto c) {};
+  // auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
   auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
   auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
@@ -1935,6 +2023,8 @@ inline auto leidenDynamicDeltaScreeningOmp(RND& rnd, const G& y, const vector<tu
     copyValuesOmpW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
+  // auto ft = [ ](auto& cchg, auto c) {};
+  // auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return true; };
   auto ft = [ ](auto& cchg, auto c) { cchg[c] = FLAG(1); };
   auto fs = [ ](const auto& cchg, const auto& vcob, auto u) { return cchg[vcob[u]]; };
   return leidenInvokeOmp<true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa, ft, fs);
