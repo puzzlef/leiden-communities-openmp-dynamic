@@ -131,12 +131,12 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
   auto BM2 = b0.membership;
   auto BV2 = b0.vertexWeight;
   auto BC2 = b0.communityWeight;
-  auto BM3 = b0.membership;
-  auto BV3 = b0.vertexWeight;
-  auto BC3 = b0.communityWeight;
-  auto BM4 = b0.membership;
-  auto BV4 = b0.vertexWeight;
-  auto BC4 = b0.communityWeight;
+  // auto BM3 = b0.membership;
+  // auto BV3 = b0.vertexWeight;
+  // auto BC3 = b0.communityWeight;
+  // auto BM4 = b0.membership;
+  // auto BV4 = b0.vertexWeight;
+  // auto BC4 = b0.communityWeight;
   // Get community memberships on updated graph (dynamic).
   for (int batchIndex=0; batchIndex<BATCH_LENGTH; ++batchIndex) {
     auto y = duplicate(x);
@@ -159,20 +159,20 @@ void runExperiment(G& x, istream& fstream, size_t rows, size_t size, double batc
     auto b2 = leidenNaiveDynamicOmp(rnd, y, deletions, insertions, BM2, BV2, BC2, {repeat});
     flog(b2, "leidenNaiveDynamicOmp");
     // Find delta-screening based dynamic Leiden.
-    auto b3 = leidenDynamicDeltaScreeningOmp(rnd, y, deletions, insertions, BM3, BV3, BC3, {repeat});
-    flog(b3, "leidenDynamicDeltaScreeningOmp");
+    // auto b3 = leidenDynamicDeltaScreeningOmp(rnd, y, deletions, insertions, BM3, BV3, BC3, {repeat});
+    // flog(b3, "leidenDynamicDeltaScreeningOmp");
     // Find frontier based dynamic Leiden.
-    auto b4 = leidenDynamicFrontierOmp(rnd, y, deletions, insertions, BM4, BV4, BC4, {repeat});
-    flog(b4, "leidenDynamicFrontierOmp");
+    // auto b4 = leidenDynamicFrontierOmp(rnd, y, deletions, insertions, BM4, BV4, BC4, {repeat});
+    // flog(b4, "leidenDynamicFrontierOmp");
     copyValuesOmpW(BM2, b2.membership);
     copyValuesOmpW(BV2, b2.vertexWeight);
     copyValuesOmpW(BC2, b2.communityWeight);
-    copyValuesOmpW(BM3, b3.membership);
-    copyValuesOmpW(BV3, b3.vertexWeight);
-    copyValuesOmpW(BC3, b3.communityWeight);
-    copyValuesOmpW(BM4, b4.membership);
-    copyValuesOmpW(BV4, b4.vertexWeight);
-    copyValuesOmpW(BC4, b4.communityWeight);
+    // copyValuesOmpW(BM3, b3.membership);
+    // copyValuesOmpW(BV3, b3.vertexWeight);
+    // copyValuesOmpW(BC3, b3.communityWeight);
+    // copyValuesOmpW(BM4, b4.membership);
+    // copyValuesOmpW(BV4, b4.vertexWeight);
+    // copyValuesOmpW(BC4, b4.communityWeight);
     swap(x, y);
   }
 }
