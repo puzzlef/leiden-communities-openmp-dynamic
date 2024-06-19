@@ -1,4 +1,5 @@
 #pragma once
+#include <limits>
 #include <utility>
 #include <tuple>
 #include <vector>
@@ -12,6 +13,7 @@
 #include <omp.h>
 #endif
 
+using std::numeric_limits;
 using std::tuple;
 using std::vector;
 using std::uniform_int_distribution;
@@ -333,15 +335,21 @@ inline void leidenInitializeW(vector<K>& vcom, vector<W>& ctot, const G& x, cons
  * @param vtot total edge weight of each vertex
  * @param fr is vertex in the subset of vertices to process?
  */
-template <class G, class K, class W, class FR>
+template <bool DYNAMIC=false, class G, class K, class W, class FR>
 inline void leidenInitializeOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, const vector<W>& vtot, FR fr) {
   size_t S = x.span();
   #pragma omp parallel for schedule(static, 2048)
   for (K u=0; u<S; ++u) {
     if (!x.hasVertex(u)) continue;
     if (!fr(u)) continue;
+    K d = vcom[u];
     vcom[u] = u;
     ctot[u] = vtot[u];
+    if (DYNAMIC) {
+      size_t DC = countValue(communitiesDisconnectedOmp(x, vcom), char(1));
+      size_t C  = communities(x, vcom).size();
+      printf("RE-2: %zu / %zu disconnected communities [at u=%d, d=%d]\n", DC, C, u, d);
+    }
   }
 }
 
@@ -353,10 +361,39 @@ inline void leidenInitializeOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, c
  * @param x original graph
  * @param vtot total edge weight of each vertex
  */
-template <class G, class K, class W>
+template <bool DYNAMIC=false, class G, class K, class W>
 inline void leidenInitializeOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, const vector<W>& vtot) {
   auto fr = [](auto u) { return true; };
-  leidenInitializeOmpW(vcom, ctot, x, vtot, fr);
+  leidenInitializeOmpW<DYNAMIC>(vcom, ctot, x, vtot, fr);
+}
+
+
+template <class G, class K, class W, class B>
+inline void leidenInitializePartialOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, const vector<W>& vtot, const vector<B>& cchg) {
+  size_t S = x.span();
+  vector<W> dtot = ctot;
+  // 1. Find minimum vertex of each community.
+  vector<K> cmin(S, numeric_limits<K>::max());
+  #pragma omp parallel for schedule(static, 2048)
+  for (K u=0; u<S; ++u) {
+    if (!x.hasVertex(u)) continue;
+    K c = vcom[u];
+    if (u < cmin[c]) cmin[c] = u;
+  }
+  // 2. Renumber communities.
+  #pragma omp parallel for schedule(static, 2048)
+  for (K d=0; d<S; ++d) {
+    K c = cmin[d];
+    if (c==numeric_limits<K>::max()) continue;
+    ctot[c] = cchg[d]? W() : dtot[d];
+  }
+  #pragma omp parallel for schedule(static, 2048)
+  for (K u=0; u<S; ++u) {
+    if (!x.hasVertex(u)) continue;
+    K d = vcom[u];
+    K c = cmin[d];
+    vcom[u] = cchg[d]? u : c;
+  }
 }
 #endif
 
@@ -1051,6 +1088,18 @@ inline void leidenCountCommunityVerticesOmpW(vector<A>& a, const G& x, const vec
 
 
 
+template <class G, class K>
+inline void leidenCommunityMinVertex(vector<K>& a, const G& x, const vector<K>& vcom) {
+  fillValueU(a, numeric_limits<K>::max());
+  x.forEachVertexKey([&](auto u) {
+    K c  = vcom[u];
+    a[c] = min(a[c], u);
+  });
+}
+
+
+
+
 /**
  * Find the vertices in each community.
  * @param coff csr offsets for vertices belonging to each community (updated)
@@ -1507,17 +1556,61 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         if (p==1) t1 = timeNow();
         bool isFirst = p==0;
         int m = 0;
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-1: %zu / %zu disconnected communities\n", DC, C);
+        }
+        if (DYNAMIC && isFirst) {
+          auto cvs = communityVertices(x, ucom);
+          for (K c=0; c<cvs.size(); ++c) {
+            if (cvs[c].empty()) continue;
+            printf("LM-1: Community %02d has %02zu vertices:", c, cvs[c].size());
+            for (auto u : cvs[c]) printf(" %d", u);
+            printf("\n");
+          }
+        }
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { return ft(cchg, c); };
           if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
           else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-2: %zu / %zu disconnected communities\n", DC, C);
+        }
+        if (DYNAMIC && isFirst) {
+          size_t CC = 0;
+          for (K c=0; c<S; ++c) {
+            if (!cchg[c]) continue;
+            printf("LM-2: Community %d has changed\n", c);
+            ++CC;
+          }
+          printf("LM-2: %zu communities have changed\n", CC);
+        }
+        if (DYNAMIC && isFirst) {
+          auto cvs = communityVertices(x, ucom);
+          for (K c=0; c<cvs.size(); ++c) {
+            if (cvs[c].empty()) continue;
+            printf("LM-2: Community %02d has %02zu vertices:", c, cvs[c].size());
+            for (auto u : cvs[c]) printf(" %d", u);
+            printf("\n");
+          }
+        }
+        leidenCommunityMinVertex(vcob, x, ucom);
+        // ctot, cchg
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return fs(cchg, vcob, u); };
           if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
-          if (isFirst) leidenInitializeOmpW(ucom, ctot, x, utot, fr);
+          if (isFirst) leidenInitializePartialOmpW(vcom, ctot, x, vtot, cchg);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-1: %zu / %zu disconnected communities\n", DC, C);
+          }
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
