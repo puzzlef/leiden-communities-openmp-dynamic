@@ -764,13 +764,15 @@ template <bool REFINE=false, class G, class K, class W>
 inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, K u, K c, const vector<W>& vtot) {
   K d = vcom[u];
   if (REFINE) {
-    W ctotd = W();
-    #pragma omp atomic capture
-    {
-      ctotd    = ctot[d];
-      ctot[d] -= vtot[u];
-    }
-    if (ctotd  > vtot[u]) {
+    W ctotd = ctot[d];
+    W ctotc = ctot[c];
+    W btotd = ctotd - vtot[u];
+    W btotc = ctotc + vtot[u];
+    if (ctotd != vtot[u] || !ctotc) return false;
+    bool okLeave = __atomic_compare_exchange((int64_t*) &ctot[d], (int64_t*) &ctotd, (int64_t*) &btotd, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    if (!okLeave) return false;
+    bool okJoin  = __atomic_compare_exchange((int64_t*) &ctot[c], (int64_t*) &ctotc, (int64_t*) &btotc, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    if (!okJoin) {
       #pragma omp atomic
       ctot[d] += vtot[u];
       return false;
@@ -779,10 +781,10 @@ inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G&
   else {
     #pragma omp atomic
     ctot[d] -= vtot[u];
+    #pragma omp atomic
+    ctot[c] += vtot[u];
+    vcom[u] = c;
   }
-  #pragma omp atomic
-  ctot[c] += vtot[u];
-  vcom[u] = c;
   return true;
 }
 #endif
@@ -825,7 +827,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
       leidenClearScanW(vcs, vcout);
       leidenScanCommunitiesW<false, REFINE>(vcs, vcout, x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(rng, x, u, vcom, vtot, ctot, vcs, vcout, M, R);
-      if (c) {
+      if (e) {
         leidenChangeCommunityW(vcom, ctot, x, u, c, vtot);
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
@@ -927,8 +929,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
       leidenClearScanW(*vcs[t], *vcout[t]);
       leidenScanCommunitiesW<false, REFINE>(*vcs[t], *vcout[t], x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(*rng[t], x, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
-      if ( REFINE && ctot[vcom[u]]>vtot[u]) continue;
-      if (c && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
+      if (e && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
       }
@@ -1630,25 +1631,51 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         if (p==1) t1 = timeNow();
         bool isFirst = p==0;
         int m = 0;
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-1: %zu / %zu disconnected communities\n", DC, C);
+        }
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { if (SUBREFINE) cchg[c] = B(1); };
           if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
           else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-2: %zu / %zu disconnected communities\n", DC, C);
+        }
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return SUBREFINE? cchg[vcob[u]] : B(1); };
           if (SUBREFINE && isFirst) {
             swap(ctot, dtot); swap(vcob, ucom); swap(vaff, cchg);
             leidenSubsetRenameCommunitiesOmpW(ucom, ctot, cchg, bufc, x, vcob, dtot, vaff);
           }
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            size_t CC = countValue(cchg, B(1));
+            printf("RE-0: %zu / %zu disconnected communities [changed = %zu]\n", DC, C, CC);
+          }
           if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeOmpU(ucom, ctot, x, utot, fr);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-1: %zu / %zu disconnected communities\n", DC, C);
+          }
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
           else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-2: %zu / %zu disconnected communities\n", DC, C);
+          }
         });
         l += max(m, 1); ++p;
         if (!isFirst && (m<=1 || p>=P)) break;
