@@ -764,25 +764,28 @@ template <bool REFINE=false, class G, class K, class W>
 inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G& x, K u, K c, const vector<W>& vtot) {
   K d = vcom[u];
   if (REFINE) {
-    W ctotd = W();
-    #pragma omp atomic capture
-    {
-      ctotd    = ctot[d];
-      ctot[d] -= vtot[u];
-    }
-    if (ctotd  > vtot[u]) {
+    W ctotd = ctot[d];
+    W ctotc = ctot[c];
+    W btotd = ctotd - vtot[u];
+    W btotc = ctotc + vtot[u];
+    if (ctotd!=vtot[u] || !ctotc) return false;
+    bool okLeave = __atomic_compare_exchange((int64_t*) &ctot[d], (int64_t*) &ctotd, (int64_t*) &btotd, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    if (!okLeave) return false;
+    bool okJoin  = __atomic_compare_exchange((int64_t*) &ctot[c], (int64_t*) &ctotc, (int64_t*) &btotc, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    if (!okJoin) {
       #pragma omp atomic
       ctot[d] += vtot[u];
       return false;
     }
+    vcom[u] = c;
   }
   else {
     #pragma omp atomic
     ctot[d] -= vtot[u];
+    #pragma omp atomic
+    ctot[c] += vtot[u];
+    vcom[u] = c;
   }
-  #pragma omp atomic
-  ctot[c] += vtot[u];
-  vcom[u] = c;
   return true;
 }
 #endif
@@ -825,7 +828,7 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
       leidenClearScanW(vcs, vcout);
       leidenScanCommunitiesW<false, REFINE>(vcs, vcout, x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(rng, x, u, vcom, vtot, ctot, vcs, vcout, M, R);
-      if (c) {
+      if (e) {
         leidenChangeCommunityW(vcom, ctot, x, u, c, vtot);
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
@@ -927,7 +930,7 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
       leidenClearScanW(*vcs[t], *vcout[t]);
       leidenScanCommunitiesW<false, REFINE>(*vcs[t], *vcout[t], x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(*rng[t], x, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
-      if (c && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
+      if (e && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, c, vtot)) {
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
       }
