@@ -368,13 +368,15 @@ inline void leidenSubsetRenameCommunitiesW(vector<K>& vcom, vector<W>& ctot, vec
  * Rename communities based on the ID of any vertex within each community.
  * @param vcom community each vertex belongs to (output)
  * @param ctot total edge weight of each community (output)
+ * @param cchg communities that have changed (output)
  * @param cvtx any vertex from each community (scratch)
  * @param x original graph
  * @param vdom old community each vertex belongs to
  * @param dtot total edge weight of each old community
+ * @param dchg old communities that have changed
  */
-template <class G, class K, class W>
-inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot) {
+template <class G, class K, class W, class B>
+inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& cchg, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot, const vector<B>& dchg) {
   const  K EMPTY = numeric_limits<K>::max();
   size_t S = x.span();
   // Find any vertex from each community.
@@ -385,6 +387,7 @@ inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, 
     K c = cvtx[d];
     if (c==EMPTY) continue;
     ctot[c] = dtot[d];
+    cchg[c] = dchg[d];
   }
   // Update community memberships.
   #pragma omp parallel for schedule(static, 2048)
@@ -1623,25 +1626,51 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         if (p==1) t1 = timeNow();
         bool isFirst = p==0;
         int m = 0;
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-1: %zu / %zu disconnected communities\n", DC, C);
+        }
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { if (SUBREFINE) cchg[c] = B(1); };
           if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
           else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-2: %zu / %zu disconnected communities\n", DC, C);
+        }
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return SUBREFINE? cchg[vcob[u]] : B(1); };
           if (SUBREFINE && isFirst) {
-            swap(ctot, dtot); swap(vcob, ucom);
-            leidenSubsetRenameCommunitiesOmpW(ucom, ctot, bufc, x, vcob, dtot);
+            swap(ctot, dtot); swap(vcob, ucom); swap(vaff, cchg);
+            leidenSubsetRenameCommunitiesOmpW(ucom, ctot, cchg, bufc, x, vcob, dtot, vaff);
+          }
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            size_t CC = countValue(cchg, B(1));
+            printf("RE-0: %zu / %zu disconnected communities [changed = %zu]\n", DC, C, CC);
           }
           if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeOmpU(ucom, ctot, x, utot, fr);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-1: %zu / %zu disconnected communities\n", DC, C);
+          }
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
           else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-2: %zu / %zu disconnected communities\n", DC, C);
+          }
         });
         l += max(m, 1); ++p;
         if (!isFirst && (m<=1 || p>=P)) break;
