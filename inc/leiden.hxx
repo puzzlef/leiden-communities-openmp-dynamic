@@ -337,13 +337,15 @@ inline void leidenCommunityAnyVertexOmpW(vector<K>& cvtx, const G& x, const vect
  * Rename communities based on the ID of any vertex within each community.
  * @param vcom community each vertex belongs to (output)
  * @param ctot total edge weight of each community (output)
+ * @param cchg communities that have changed (output)
  * @param cvtx any vertex from each community (scratch)
  * @param x original graph
  * @param vdom old community each vertex belongs to
  * @param dtot total edge weight of each old community
+ * @param dchg old communities that have changed
  */
-template <class G, class K, class W>
-inline void leidenSubsetRenameCommunitiesW(vector<K>& vcom, vector<W>& ctot, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot) {
+template <class G, class K, class W, class B>
+inline void leidenSubsetRenameCommunitiesW(vector<K>& vcom, vector<W>& ctot, vector<B>& cchg, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot, const vector<B>& dchg) {
   const K EMPTY = numeric_limits<K>::max();
   size_t  S = x.span();
   // Find any vertex from each community.
@@ -353,6 +355,7 @@ inline void leidenSubsetRenameCommunitiesW(vector<K>& vcom, vector<W>& ctot, vec
     K c = cvtx[d];
     if (c==EMPTY) continue;
     ctot[c] = dtot[d];
+    cchg[c] = dchg[d];
   }
   // Update community memberships.
   x.forEachVertexKey([&](auto u) {
@@ -368,13 +371,15 @@ inline void leidenSubsetRenameCommunitiesW(vector<K>& vcom, vector<W>& ctot, vec
  * Rename communities based on the ID of any vertex within each community.
  * @param vcom community each vertex belongs to (output)
  * @param ctot total edge weight of each community (output)
+ * @param cchg communities that have changed (output)
  * @param cvtx any vertex from each community (scratch)
  * @param x original graph
  * @param vdom old community each vertex belongs to
  * @param dtot total edge weight of each old community
+ * @param dchg old communities that have changed
  */
-template <class G, class K, class W>
-inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot) {
+template <class G, class K, class W, class B>
+inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& cchg, vector<K>& cvtx, const G& x, const vector<K>& vdom, const vector<W>& dtot, const vector<B>& dchg) {
   const  K EMPTY = numeric_limits<K>::max();
   size_t S = x.span();
   // Find any vertex from each community.
@@ -385,6 +390,7 @@ inline void leidenSubsetRenameCommunitiesOmpW(vector<K>& vcom, vector<W>& ctot, 
     K c = cvtx[d];
     if (c==EMPTY) continue;
     ctot[c] = dtot[d];
+    cchg[c] = dchg[d];
   }
   // Update community memberships.
   #pragma omp parallel for schedule(static, 2048)
@@ -1480,8 +1486,8 @@ inline auto leidenInvoke(RND& rnd, const G& x, const LeidenOptions& o, FI fi, FM
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return SUBREFINE? cchg[vcob[u]] : B(1); };
           if (SUBREFINE && isFirst) {
-            swap(ctot, dtot); swap(vcob, ucom);
-            leidenSubsetRenameCommunitiesW(ucom, ctot, bufc, x, vcob, dtot);
+            swap(ctot, dtot); swap(vcob, ucom); swap(vaff, cchg);
+            leidenSubsetRenameCommunitiesW(ucom, ctot, cchg, bufc, x, vcob, dtot, vaff);
           }
           if (isFirst) copyValuesW(vcob.data(), ucom.data(), x.span());
           else         copyValuesW(vcob.data(), vcom.data(), y.span());
@@ -1631,8 +1637,8 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         tr += measureDuration([&]() {
           auto fr = [&](auto u) { return SUBREFINE? cchg[vcob[u]] : B(1); };
           if (SUBREFINE && isFirst) {
-            swap(ctot, dtot); swap(vcob, ucom);
-            leidenSubsetRenameCommunitiesOmpW(ucom, ctot, bufc, x, vcob, dtot);
+            swap(ctot, dtot); swap(vcob, ucom); swap(vaff, cchg);
+            leidenSubsetRenameCommunitiesOmpW(ucom, ctot, cchg, bufc, x, vcob, dtot, vaff);
           }
           if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
