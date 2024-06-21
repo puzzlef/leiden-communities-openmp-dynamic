@@ -1839,7 +1839,7 @@ inline auto leidenNaiveDynamicOmp(RND& rnd, const G& y, const vector<tuple<K, K,
     fillValueOmpU(vaff, FLAG(1));
   };
   auto fa = [ ](auto u) { return true; };
-  return leidenInvokeOmp<true, true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, false, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
@@ -2042,7 +2042,7 @@ inline auto leidenDynamicDeltaScreeningOmp(RND& rnd, const G& y, const vector<tu
     copyValuesOmpW(vaff, vertices);
   };
   auto fa = [&](auto u) { return vertices[u] == B(1); };
-  return leidenInvokeOmp<true, true, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, false, RANDOM, USEPARENT, FLAG>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
@@ -2170,7 +2170,7 @@ inline auto leidenDynamicFrontierOmp(RND& rnd, const G& y, const vector<tuple<K,
   };
   constexpr int CHUNK_SIZE = 32;
   auto fa = [ ](auto u) { return true; };
-  return leidenInvokeOmp<true, true, RANDOM, USEPARENT, FLAG, CHUNK_SIZE>(rnd, y, o, fi, fm, fa);
+  return leidenInvokeOmp<true, false, RANDOM, USEPARENT, FLAG, CHUNK_SIZE>(rnd, y, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
