@@ -3,7 +3,7 @@ const os = require('os');
 const path = require('path');
 
 const ROMPTH = /^OMP_NUM_THREADS=(\d+)/;
-const RGRAPH = /^Loading graph .*\/(.*?)\.txt \.\.\./m;
+const RGRAPH = /^Loading graph .*\/(.*?)\.mtx \.\.\./m;
 const RORDER = /^order: (\d+) size: (\d+) (?:\[\w+\] )?\{\}/m;
 const RRESLT = /^\{-(.+?)\/\+(.+?) batchf, (.+?) threads\} -> \{(.+?)ms, (.+?)ms mark, (.+?)ms init, (.+?)ms firstpass, (.+?)ms locmove, (.+?)ms refine, (.+?)ms aggr, (.+?) aff, (.+?) iters, (.+?) passes, (.+?) modularity, (.+?)\/(.+?) disconnected\} (.+)/m;
 
@@ -57,7 +57,6 @@ function readLogLine(ln, data, state) {
     state.size  = 0;
     state.batch_deletions_fraction  = 0;
     state.batch_insertions_fraction = 0;
-    state.batch_index = 0;
   }
   else if (RORDER.test(ln)) {
     var [, order, size] = RORDER.exec(ln);
@@ -85,7 +84,6 @@ function readLogLine(ln, data, state) {
       communities: parseFloat(communities),
       technique,
     }));
-    if (technique==='leidenDynamicFrontierOmp') state.batch_index++;
   }
   return state;
 }
