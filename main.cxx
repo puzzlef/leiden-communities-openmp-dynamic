@@ -195,9 +195,9 @@ void runExperiment(const G& x) {
     );
   };
   // Get community memberships on original graph (static).
-  auto c0 = louvainStaticOmp(x, {5});
+  auto c0 = louvainStaticOmp(x, {1});
   glog(c0, "louvainStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
-  auto b0 = leidenStaticOmp(rnd, x, {5});
+  auto b0 = leidenStaticOmp(rnd, x, {1});
   glog(b0, "leidenStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   #if BATCH_LENGTH>1
   vector<K> B2, B3, B4;

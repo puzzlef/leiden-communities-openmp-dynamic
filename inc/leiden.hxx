@@ -816,26 +816,34 @@ inline bool leidenChangeCommunityOmpW(vector<K>& vcom, vector<W>& ctot, const G&
  */
 template <bool REFINE=false, bool RANDOM=false, class G, class K, class W, class B, class FC, class FA, class FB>
 inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector<K>& vcs, vector<W>& vcout, xorshift32_engine& rng, const G& x, const vector<K>& vcob, const vector<W>& vtot, double M, double R, int L, FC fc, FA fa, FB fb) {
-  int l = 0;
+  int l = 0, n = 0;
   W  el = W();
+  size_t S = x.span();
+  vector<char> blocked(S);
   for (; l<L;) {
     el = W();
     x.forEachVertexKey([&](auto u) {
       if (!fa(u)) return;
       if (!REFINE && !vaff[u]) return;
-      if ( REFINE && ctot[vcom[u]]>vtot[u]) return;
+      if ( REFINE && ctot[vcom[u]]!=vtot[u]) return;
       K d = vcom[u];
       leidenClearScanW(vcs, vcout);
       leidenScanCommunitiesW<false, REFINE>(vcs, vcout, x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity<false, RANDOM>(rng, x, u, vcom, vtot, ctot, vcs, vcout, M, R);
-      if (e) {
-        leidenChangeCommunityW(vcom, ctot, x, u, c, vtot);
+      if (REFINE) x.forEachEdgeKey(u, [&](auto v) { c = vcom[v]; });
+      if (e && c!=d && ctot[d]==vtot[u] && ctot[c]>0.5 && vtot[u]>0.5 && !blocked[vcom[u]]) {
+        if (REFINE) n++;
+        ctot[d] -= vtot[u];
+        ctot[c] += vtot[u];
+        vcom[u] = c;
+        if (REFINE) blocked[c] = 1;
         if (!REFINE) { fb(d); fb(c); }
         if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
       }
       if (!REFINE) vaff[u] = B();
       el += e;  // l1-norm
     });
+    if (REFINE) printf("Refine phase: moved=%d\n", n);
     if (REFINE || fc(el, l++)) break;
   }
   return l>1 || el? l : 0;
@@ -1632,25 +1640,51 @@ inline auto leidenInvokeOmp(RND& rnd, const G& x, const LeidenOptions& o, FI fi,
         if (p==1) t1 = timeNow();
         bool isFirst = p==0;
         int m = 0;
+        if (!DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-1: %zu / %zu disconnected communities\n", DC, C);
+        }
         tl += measureDuration([&]() {
           auto fb = [&](auto c) { if (SUBREFINE) cchg[c] = B(1); };
           if (isFirst) m += leidenMoveOmpW<false, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fa, fb);
           else         m += leidenMoveOmpW<false, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
         });
+        if (!DYNAMIC && isFirst) {
+          size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+          size_t C  = communities(x, ucom).size();
+          printf("LM-2: %zu / %zu disconnected communities\n", DC, C);
+        }
         tr += measureDuration([&]() {
           if (SUBREFINE && isFirst) {
             swap(ctot, dtot); swap(vcob, ucom); swap(vaff, cchg);
             leidenSubsetRenameCommunitiesOmpW(ucom, ctot, cchg, bufc, x, vcob, dtot, vaff);
+          }
+          if (!DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            size_t CC = countValue(cchg, B(1));
+            printf("RE-0: %zu / %zu disconnected communities [changed = %zu]\n", DC, C, CC);
           }
           auto fr = [&](auto u) { return SUBREFINE? cchg[vcob[u]] : B(1); };
           if (isFirst) copyValuesOmpW(vcob.data(), ucom.data(), x.span());
           else         copyValuesOmpW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeOmpU(ucom, ctot, x, utot, fr);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
+          if (!DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-1: %zu / %zu disconnected communities\n", DC, C);
+          }
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
           // else         fillValueOmpU(vaff.data(), y.order(), B(1));
-          if (isFirst) m += leidenMoveOmpW<true, RANDOM>(ucom, ctot, vaff, vcs, vcout, rng, x, vcob, utot, M, R, L, fc, fr);
-          else         m += leidenMoveOmpW<true, RANDOM>(vcom, ctot, vaff, vcs, vcout, rng, y, vcob, vtot, M, R, L, fc);
+          if (isFirst) m += leidenMoveW<true, RANDOM>(ucom, ctot, vaff, *vcs[0], *vcout[0], *rng[0], x, vcob, utot, M, R, L, fc, fr);
+          else         m += leidenMoveW<true, RANDOM>(vcom, ctot, vaff, *vcs[0], *vcout[0], *rng[0], y, vcob, vtot, M, R, L, fc);
+          if (!DYNAMIC && isFirst) {
+            size_t DC = countValue(communitiesDisconnectedOmp(x, ucom), char(1));
+            size_t C  = communities(x, ucom).size();
+            printf("RE-2: %zu / %zu disconnected communities\n", DC, C);
+          }
         });
         l += max(m, 1); ++p;
         if (!isFirst && (m<=1 || p>=P)) break;
@@ -1761,6 +1795,7 @@ inline auto leidenStatic(RND& rnd, const G& x, const LeidenOptions& o={}) {
  */
 template <bool RANDOM=false, bool USEPARENT=false, class FLAG=char, class RND, class G>
 inline auto leidenStaticOmp(RND& rnd, const G& x, const LeidenOptions& o={}) {
+  printf("TEST: leidenStaticOmp()\n");
   auto fi = [&](auto& vcom, auto& vtot, auto& ctot)  {
     leidenVertexWeightsOmpW(vtot, x);
     leidenInitializeOmpW(vcom, ctot, x, vtot);
@@ -1790,12 +1825,12 @@ template <class B, class G, class K, class V>
 inline void leidenChangedCommunitiesU(vector<B>& cchg, const G& y, const vector<K>& vcom, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions) {
   size_t S = y.span();
   for (const auto& [u, v] : deletions) {
-    if (vcom[u] != vcom[v]) continue;
     cchg[vcom[u]] = B(1);
+    cchg[vcom[v]] = B(1);
   }
   for (const auto& [u, v] : insertions) {
-    if (vcom[u] != vcom[v]) continue;
     cchg[vcom[u]] = B(1);
+    cchg[vcom[v]] = B(1);
   }
 }
 
@@ -1817,15 +1852,15 @@ inline void leidenChangedCommunitiesOmpU(vector<B>& cchg, const G& y, const vect
   for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
     K v = get<1>(deletions[i]);
-    if (vcom[u] != vcom[v]) continue;
     cchg[vcom[u]] = B(1);
+    cchg[vcom[v]] = B(1);
   }
   #pragma omp parallel for schedule(auto)
   for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
     K v = get<1>(insertions[i]);
-    if (vcom[u] != vcom[v]) continue;
     cchg[vcom[u]] = B(1);
+    cchg[vcom[v]] = B(1);
   }
 }
 
@@ -1926,19 +1961,22 @@ inline auto leidenAffectedVerticesDeltaScreeningW(vector<B>& vertices, vector<B>
   fillValueU(communities, B());
   xorshift32_engine rng(0);
   for (const auto& [u, v] : deletions) {
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
     if (vcom[u] != vcom[v]) continue;
     vertices[u]  = 1;
     neighbors[u] = 1;
     communities[vcom[v]] = 1;
-    cchg[vcom[u]] = 1;
   }
   for (size_t i=0; i<insertions.size();) {
     K u = get<0>(insertions[i]);
+    cchg[vcom[u]] = 1;
     leidenClearScanW(vcs, vcout);
     for (; i<insertions.size() && get<0>(insertions[i])==u; ++i) {
       K v = get<1>(insertions[i]);
       V w = get<2>(insertions[i]);
-      if (vcom[u] == vcom[v]) { cchg[vcom[u]] = 1; continue; }
+      cchg[vcom[v]] = 1;
+      if (vcom[u] == vcom[v]) continue;
       leidenScanCommunityW(vcs, vcout, u, v, w, vcom);
     }
     auto [c, e] = leidenChooseCommunity(rng, y, u, vcom, vtot, ctot, vcs, vcout, M, R);
@@ -1985,11 +2023,12 @@ inline auto leidenAffectedVerticesDeltaScreeningOmpW(vector<B>& vertices, vector
   for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
     K v = get<1>(deletions[i]);
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
     if (vcom[u] != vcom[v]) continue;
     vertices[u]  = 1;
     neighbors[u] = 1;
     communities[vcom[v]] = 1;
-    cchg[vcom[u]] = 1;
   }
   #pragma omp parallel
   {
@@ -1998,13 +2037,15 @@ inline auto leidenAffectedVerticesDeltaScreeningOmpW(vector<B>& vertices, vector
     K  u0 = I>0? get<0>(insertions[0]) : 0;
     for (size_t i=0, n=0; i<I;) {
       K u = get<0>(insertions[i]);
+      cchg[vcom[u]] = 1;
       if (u!=u0) { ++n; u0 = u; }
       if (n % T != t) { ++i; continue; }
       leidenClearScanW(*vcs[t], *vcout[t]);
       for (; i<I && get<0>(insertions[i])==u; ++i) {
         K v = get<1>(insertions[i]);
         V w = get<2>(insertions[i]);
-        if (vcom[u] == vcom[v]) { cchg[vcom[u]] = 1; continue; }
+        cchg[vcom[v]] = 1;
+        if (vcom[u] == vcom[v]) continue;
         leidenScanCommunityW(*vcs[t], *vcout[t], u, v, w, vcom);
       }
       auto [c, e] = leidenChooseCommunity(rng, y, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
@@ -2122,12 +2163,15 @@ template <class B, class G, class K, class V>
 inline void leidenAffectedVerticesFrontierW(vector<B>& vertices, vector<B>& cchg, const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom) {
   fillValueU(vertices, B());
   for (const auto& [u, v] : deletions) {
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
     if (vcom[u] != vcom[v]) continue;
     vertices[u]  = 1;
-    cchg[vcom[u]] = 1;
   }
   for (const auto& [u, v, w] : insertions) {
-    if (vcom[u] == vcom[v]) { cchg[vcom[u]] = 1; continue; }
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
+    if (vcom[u] == vcom[v]) continue;
     vertices[u]  = 1;
   }
 }
@@ -2153,15 +2197,18 @@ inline void leidenAffectedVerticesFrontierOmpW(vector<B>& vertices, vector<B>& c
   for (size_t i=0; i<D; ++i) {
     K u = get<0>(deletions[i]);
     K v = get<1>(deletions[i]);
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
     if (vcom[u] != vcom[v]) continue;
     vertices[u]  = 1;
-    cchg[vcom[u]] = 1;
   }
   #pragma omp parallel for schedule(auto)
   for (size_t i=0; i<I; ++i) {
     K u = get<0>(insertions[i]);
     K v = get<1>(insertions[i]);
-    if (vcom[u] == vcom[v]) { cchg[vcom[u]] = 1; continue; }
+    cchg[vcom[u]] = 1;
+    cchg[vcom[v]] = 1;
+    if (vcom[u] == vcom[v]) continue;
     vertices[u]  = 1;
   }
 }
