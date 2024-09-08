@@ -397,6 +397,15 @@ inline vector<char> communitiesDisconnectedOmp(const G& x, const vector<K>& vcom
       coms[c] = 0;
     }
   }
+  bool any = false;
+  for (K c=0; c<S; ++c)
+    if (a[c]) any = true;
+  if (any) {
+    printf("TEST: Disconnected communities: ");
+    for (K c=0; c<S; ++c)
+      if (a[c]) printf("%d, ", c);
+    printf("\n");
+  }
   return a;
 }
 #endif
