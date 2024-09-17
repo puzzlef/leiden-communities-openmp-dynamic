@@ -1,5 +1,4 @@
 #include <utility>
-#include <random>
 #include <vector>
 #include <string>
 #include <iostream>
@@ -58,10 +57,6 @@ inline float refinementTime(const LeidenResult<K, W>& a) {
 
 template <class G>
 void runExperiment(const G& x) {
-  using K = typename G::key_type;
-  using V = typename G::edge_value_type;
-  random_device dev;
-  default_random_engine rnd(dev());
   int repeat = REPEAT_METHOD;
   double   M = edgeWeightOmp(x)/2;
   // Follow a specific result logging format, which can be easily parsed later.
@@ -75,20 +70,12 @@ void runExperiment(const G& x) {
     );
   };
   // Get community memberships on original graph (static).
-  auto a0 = louvainStaticOmp(x, {repeat});
-  flog(a0, "louvainStaticOmp");
-  auto b0 = leidenStaticOmp<false>(rnd, x, {repeat});
-  flog(b0, "leidenStaticOmpGreedy");
-  auto c0 = leidenStaticOmp<false>(rnd, x, {repeat, 1.0, 1e-06, 1.0, 10.0, 100, 100});
-  flog(c0, "leidenStaticOmpGreedyMedium");
-  auto d0 = leidenStaticOmp<false>(rnd, x, {repeat, 1.0, 1e-10, 1.0, 10.0, 100, 100});
-  flog(d0, "leidenStaticOmpGreedyHeavy");
-  auto b1 = leidenStaticOmp<true> (rnd, x, {repeat});
-  flog(b1, "leidenStaticOmpRandom");
-  auto c1 = leidenStaticOmp<true> (rnd, x, {repeat, 1.0, 1e-06, 1.0, 10.0, 100, 100});
-  flog(c1, "leidenStaticOmpRandomMedium");
-  auto d1 = leidenStaticOmp<true> (rnd, x, {repeat, 1.0, 1e-10, 1.0, 10.0, 100, 100});
-  flog(d1, "leidenStaticOmpRandomHeavy");
+  {
+    auto a0 = louvainStaticOmp(x, {repeat});
+    flog(a0, "louvainStaticOmp");
+    auto b0 = leidenStaticOmp(x, {repeat});
+    flog(b0, "leidenStaticOmp");
+  }
 }
 
 
@@ -104,7 +91,7 @@ int main(int argc, char **argv) {
   LOG("Loading graph %s ...\n", file);
   DiGraph<K, None, V> x;
   readMtxOmpW(x, file, weighted); LOG(""); println(x);
-  if (!symmetric) { x = symmetricizeOmp(x); LOG(""); print(x); printf(" (symmetricize)\n"); }
+  if (!symmetric) { x = symmetrizeOmp(x); LOG(""); print(x); printf(" (symmetrize)\n"); }
   runExperiment(x);
   printf("\n");
   return 0;

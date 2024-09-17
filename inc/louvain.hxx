@@ -1006,11 +1006,11 @@ inline void louvainAggregateOmpW(vector<size_t>& yoff, vector<K>& ydeg, vector<K
  * @param fa is vertex allowed to be updated? (u)
  * @returns louvain result
  */
-template <bool DYNAMIC=false, class FLAG=char, class G, class FI, class FM, class FA>
+template <bool DYNAMIC=false, class G, class FI, class FM, class FA>
 inline auto louvainInvoke(const G& x, const LouvainOptions& o, FI fi, FM fm, FA fa) {
   using  K = typename G::key_type;
   using  W = LOUVAIN_WEIGHT_TYPE;
-  using  B = FLAG;
+  using  B = char;
   // Options.
   double R = o.resolution;
   int    L = o.maxIterations, l = 0;
@@ -1071,7 +1071,6 @@ inline auto louvainInvoke(const G& x, const LouvainOptions& o, FI fi, FM fm, FA 
         l += max(m, 1); ++p;
         if (m<=1 || p>=P) break;
         size_t GN = isFirst? x.order() : y.order();
-        size_t GS = isFirst? x.span()  : y.span();
         size_t CN = 0;
         if (isFirst) CN = louvainCommunityExistsW(cv.degrees, x, ucom);
         else         CN = louvainCommunityExistsW(cv.degrees, y, vcom);
@@ -1080,10 +1079,10 @@ inline auto louvainInvoke(const G& x, const LouvainOptions& o, FI fi, FM fm, FA 
         else         louvainRenumberCommunitiesW(vcom, cv.degrees, y);
         if (isFirst) {}
         else         louvainLookupCommunitiesU(ucom, vcom);
-        cv.respan(CN); z.respan(CN);
-        if (isFirst) louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, x, ucom);
-        else         louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, y, vcom);
         ta += measureDuration([&]() {
+          cv.respan(CN); z.respan(CN);
+          if (isFirst) louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, x, ucom);
+          else         louvainCommunityVerticesW(cv.offsets, cv.degrees, cv.edgeKeys, y, vcom);
           if (isFirst) louvainAggregateW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
           else         louvainAggregateW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });
@@ -1116,11 +1115,11 @@ inline auto louvainInvoke(const G& x, const LouvainOptions& o, FI fi, FM fm, FA 
  * @param fa is vertex allowed to be updated? (u)
  * @returns louvain result
  */
-template <bool DYNAMIC=false, class FLAG=char, class G, class FI, class FM, class FA>
+template <bool DYNAMIC=false, class G, class FI, class FM, class FA>
 inline auto louvainInvokeOmp(const G& x, const LouvainOptions& o, FI fi, FM fm, FA fa) {
   using  K = typename G::key_type;
   using  W = LOUVAIN_WEIGHT_TYPE;
-  using  B = FLAG;
+  using  B = char;
   // Options.
   double R = o.resolution;
   int    L = o.maxIterations, l = 0;
@@ -1185,7 +1184,6 @@ inline auto louvainInvokeOmp(const G& x, const LouvainOptions& o, FI fi, FM fm, 
         l += max(m, 1); ++p;
         if (m<=1 || p>=P) break;
         size_t GN = isFirst? x.order() : y.order();
-        size_t GS = isFirst? x.span()  : y.span();
         size_t CN = 0;
         if (isFirst) CN = louvainCommunityExistsOmpW(cv.degrees, x, ucom);
         else         CN = louvainCommunityExistsOmpW(cv.degrees, y, vcom);
@@ -1194,10 +1192,10 @@ inline auto louvainInvokeOmp(const G& x, const LouvainOptions& o, FI fi, FM fm, 
         else         louvainRenumberCommunitiesOmpW(vcom, cv.degrees, bufk, y);
         if (isFirst) {}
         else         louvainLookupCommunitiesOmpU(ucom, vcom);
-        cv.respan(CN); z.respan(CN);
-        if (isFirst) louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
-        else         louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
         ta += measureDuration([&]() {
+          cv.respan(CN); z.respan(CN);
+          if (isFirst) louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, x, ucom);
+          else         louvainCommunityVerticesOmpW(cv.offsets, cv.degrees, cv.edgeKeys, bufk, y, vcom);
           if (isFirst) louvainAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, x, ucom, cv.offsets, cv.edgeKeys);
           else         louvainAggregateOmpW(z.offsets, z.degrees, z.edgeKeys, z.edgeValues, bufs, vcs, vcout, y, vcom, cv.offsets, cv.edgeKeys);
         });
@@ -1259,17 +1257,18 @@ inline void louvainSetupInitialsW(vector2d<K>& qs, vector2d<W>& qvtots, vector2d
  * @param o louvain options
  * @returns louvain result
  */
-template <class FLAG=char, class G>
+template <class G>
 inline auto louvainStatic(const G& x, const LouvainOptions& o={}) {
+  using B = char;
   auto fi = [&](auto& vcom, auto& vtot, auto& ctot)  {
     louvainVertexWeightsW(vtot, x);
     louvainInitializeW(vcom, ctot, x, vtot);
   };
   auto fm = [ ](auto& vaff, const auto& vcom, const auto& vtot, const auto& ctot, auto& vcs,  auto& vcout) {
-    fillValueU(vaff, FLAG(1));
+    fillValueU(vaff, B(1));
   };
   auto fa = [ ](auto u) { return true; };
-  return louvainInvoke<false, FLAG>(x, o, fi, fm, fa);
+  return louvainInvoke<false>(x, o, fi, fm, fa);
 }
 
 
@@ -1280,409 +1279,18 @@ inline auto louvainStatic(const G& x, const LouvainOptions& o={}) {
  * @param o louvain options
  * @returns louvain result
  */
-template <class FLAG=char, class G>
+template <class G>
 inline auto louvainStaticOmp(const G& x, const LouvainOptions& o={}) {
+  using B = char;
   auto fi = [&](auto& vcom, auto& vtot, auto& ctot)  {
     louvainVertexWeightsOmpW(vtot, x);
     louvainInitializeOmpW(vcom, ctot, x, vtot);
   };
   auto fm = [ ](auto& vaff, const auto& vcom, const auto& vtot, const auto& ctot, auto& vcs,  auto& vcout) {
-    fillValueOmpU(vaff, FLAG(1));
+    fillValueOmpU(vaff, B(1));
   };
   auto fa = [ ](auto u) { return true; };
-  return louvainInvokeOmp<false, FLAG>(x, o, fi, fm, fa);
-}
-#endif
-#pragma endregion
-
-
-
-
-#pragma region NAIVE-DYNAMIC APPROACH
-/**
- * Obtain the community membership of each vertex with Naive-dynamic Louvain.
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected)
- * @param insertions edge insertions for this batch update (undirected)
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainNaiveDynamic(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot)  {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [ ](auto& vaff, const auto& vcom, const auto& vtot, const auto& ctot, auto& vcs,  auto& vcout) {
-    fillValueU(vaff, FLAG(1));
-  };
-  auto fa = [ ](auto u) { return true; };
-  return louvainInvoke<true, FLAG>(y, o, fi, fm, fa);
-}
-
-
-#ifdef OPENMP
-/**
- * Obtain the community membership of each vertex with Naive-dynamic Louvain.
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected)
- * @param insertions edge insertions for this batch update (undirected)
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainNaiveDynamicOmp(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot)  {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromOmpU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [ ](auto& vaff, const auto& vcom, const auto& vtot, const auto& ctot, auto& vcs,  auto& vcout) {
-    fillValueOmpU(vaff, FLAG(1));
-  };
-  auto fa = [ ](auto u) { return true; };
-  return louvainInvokeOmp<true, FLAG>(y, o, fi, fm, fa);
-}
-#endif
-#pragma endregion
-
-
-
-
-#pragma region DYNAMIC DELTA-SCREENING
-/**
- * Find the vertices which should be processed upon a batch of edge insertions and deletions.
- * @param vertices vertex affected flags (output)
- * @param neighbors neighbor affected flags (output)
- * @param communities community affected flags (output)
- * @param vcs communities vertex u is linked to (temporary buffer, updated)
- * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected, sorted by source vertex id)
- * @param insertions edge insertions for this batch update (undirected, sorted by source vertex id)
- * @param vcom community each vertex belongs to
- * @param vtot total edge weight of each vertex
- * @param ctot total edge weight of each community
- * @param M total weight of "undirected" graph (1/2 of directed graph)
- * @param R resolution (0, 1]
- */
-template <class B, class G, class K, class V, class W>
-inline auto louvainAffectedVerticesDeltaScreeningW(vector<B>& vertices, vector<B>& neighbors, vector<B>& communities, vector<K>& vcs, vector<W>& vcout, const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom, const vector<W>& vtot, const vector<W>& ctot, double M, double R=1) {
-  fillValueU(vertices,    B());
-  fillValueU(neighbors,   B());
-  fillValueU(communities, B());
-  for (const auto& [u, v] : deletions) {
-    if (vcom[u] != vcom[v]) continue;
-    vertices[u]  = 1;
-    neighbors[u] = 1;
-    communities[vcom[v]] = 1;
-  }
-  for (size_t i=0; i<insertions.size();) {
-    K u = get<0>(insertions[i]);
-    louvainClearScanW(vcs, vcout);
-    for (; i<insertions.size() && get<0>(insertions[i])==u; ++i) {
-      K v = get<1>(insertions[i]);
-      V w = get<2>(insertions[i]);
-      if (vcom[u] == vcom[v]) continue;
-      louvainScanCommunityW(vcs, vcout, u, v, w, vcom);
-    }
-    auto [c, e] = louvainChooseCommunity(y, u, vcom, vtot, ctot, vcs, vcout, M, R);
-    if (e<=0) continue;
-    vertices[u]  = 1;
-    neighbors[u] = 1;
-    communities[c] = 1;
-  }
-  y.forEachVertexKey([&](auto u) {
-    if (neighbors[u]) y.forEachEdgeKey(u, [&](auto v) { vertices[v] = 1; });
-    if (communities[vcom[u]]) vertices[u] = 1;
-  });
-}
-
-
-#ifdef OPENMP
-/**
- * Find the vertices which should be processed upon a batch of edge insertions and deletions.
- * @param vertices vertex affected flags (output)
- * @param neighbors neighbor affected flags (output)
- * @param communities community affected flags (output)
- * @param vcs communities vertex u is linked to (temporary buffer, updated)
- * @param vcout total edge weight from vertex u to community C (temporary buffer, updated)
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected, sorted by source vertex id)
- * @param insertions edge insertions for this batch update (undirected, sorted by source vertex id)
- * @param vcom community each vertex belongs to
- * @param vtot total edge weight of each vertex
- * @param ctot total edge weight of each community
- * @param M total weight of "undirected" graph (1/2 of directed graph)
- * @param R resolution (0, 1]
- */
-template <class B, class G, class K, class V, class W>
-inline auto louvainAffectedVerticesDeltaScreeningOmpW(vector<B>& vertices, vector<B>& neighbors, vector<B>& communities, vector<vector<K>*>& vcs, vector<vector<W>*>& vcout, const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom, const vector<W>& vtot, const vector<W>& ctot, double M, double R=1) {
-  size_t S = y.span();
-  size_t D = deletions.size();
-  size_t I = insertions.size();
-  fillValueOmpU(vertices,    B());
-  fillValueOmpU(neighbors,   B());
-  fillValueOmpU(communities, B());
-  #pragma omp parallel for schedule(auto)
-  for (size_t i=0; i<D; ++i) {
-    K u = get<0>(deletions[i]);
-    K v = get<1>(deletions[i]);
-    if (vcom[u] != vcom[v]) continue;
-    vertices[u]  = 1;
-    neighbors[u] = 1;
-    communities[vcom[v]] = 1;
-  }
-  #pragma omp parallel
-  {
-    int T = omp_get_num_threads();
-    int t = omp_get_thread_num();
-    K  u0 = I>0? get<0>(insertions[0]) : 0;
-    for (size_t i=0, n=0; i<I;) {
-      K u = get<0>(insertions[i]);
-      if (u!=u0) { ++n; u0 = u; }
-      if (n % T != t) { ++i; continue; }
-      louvainClearScanW(*vcs[t], *vcout[t]);
-      for (; i<I && get<0>(insertions[i])==u; ++i) {
-        K v = get<1>(insertions[i]);
-        V w = get<2>(insertions[i]);
-        if (vcom[u] == vcom[v]) continue;
-        louvainScanCommunityW(*vcs[t], *vcout[t], u, v, w, vcom);
-      }
-      auto [c, e] = louvainChooseCommunity(y, u, vcom, vtot, ctot, *vcs[t], *vcout[t], M, R);
-      if (e<=0) continue;
-      vertices[u]  = 1;
-      neighbors[u] = 1;
-      communities[c] = 1;
-    }
-  }
-  #pragma omp parallel for schedule(auto)
-  for (K u=0; u<S; ++u) {
-    if (!y.hasVertex(u)) continue;
-    if (neighbors[u]) y.forEachEdgeKey(u, [&](auto v) { vertices[v] = 1; });
-    if (communities[vcom[u]]) vertices[u] = 1;
-  }
-}
-#endif
-
-
-
-
-/**
- * Obtain the community membership of each vertex with Dynamic Delta-screening Louvain.
- * @param y updated graph
- * @param deletions edge deletions in batch update (undirected, sorted by source vertex id)
- * @param insertions edge insertions in batch update (undirected, sorted by source vertex id)
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainDynamicDeltaScreening(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  using  B = FLAG;
-  size_t S = y.span();
-  double R = o.resolution;
-  double M = edgeWeight(y)/2;
-  vector<B> vertices(S), neighbors(S), communities(S);
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot) {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [&](auto& vaff, auto& vcs, auto& vcout, const auto& vcom, const auto& vtot, const auto& ctot) {
-    louvainAffectedVerticesDeltaScreeningW(vertices, neighbors, communities, vcs, vcout, y, deletions, insertions, vcom, vtot, ctot, M, R);
-    copyValuesW(vaff, vertices);
-  };
-  auto fa = [&](auto u) { return vertices[u] == B(1); };
-  return louvainInvoke<true, FLAG>(y, o, fi, fm, fa);
-}
-
-
-#ifdef OPENMP
-/**
- * Obtain the community membership of each vertex with Dynamic Delta-screening Louvain.
- * @param y updated graph
- * @param deletions edge deletions in batch update
- * @param insertions edge insertions in batch update
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainDynamicDeltaScreeningOmp(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  using  B = FLAG;
-  size_t S = y.span();
-  double R = o.resolution;
-  double M = edgeWeightOmp(y)/2;
-  int    T = omp_get_max_threads();
-  vector<B> vertices(S), neighbors(S), communities(S);
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot) {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromOmpU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [&](auto& vaff, auto& vcs, auto& vcout, const auto& vcom, const auto& vtot, const auto& ctot) {
-    louvainAffectedVerticesDeltaScreeningOmpW(vertices, neighbors, communities, vcs, vcout, y, deletions, insertions, vcom, vtot, ctot, M, R);
-    copyValuesOmpW(vaff, vertices);
-  };
-  auto fa = [&](auto u) { return vertices[u] == B(1); };
-  return louvainInvokeOmp<true, FLAG>(y, o, fi, fm, fa);
-}
-#endif
-#pragma endregion
-
-
-
-
-#pragma region DYNAMIC FRONTIER APPROACH
-/**
- * Find the vertices which should be processed upon a batch of edge insertions and deletions.
- * @param vertices vertex affected flags (output)
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected)
- * @param insertions edge insertions for this batch update (undirected)
- * @param vcom community each vertex belongs to
- */
-template <class B, class G, class K, class V>
-inline void louvainAffectedVerticesFrontierW(vector<B>& vertices, const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom) {
-  fillValueU(vertices, B());
-  for (const auto& [u, v] : deletions) {
-    if (vcom[u] != vcom[v]) continue;
-    vertices[u]  = 1;
-  }
-  for (const auto& [u, v, w] : insertions) {
-    if (vcom[u] == vcom[v]) continue;
-    vertices[u]  = 1;
-  }
-}
-
-
-#ifdef OPENMP
-/**
- * Find the vertices which should be processed upon a batch of edge insertions and deletions.
- * @param vertices vertex affected flags (output)
- * @param y updated graph
- * @param deletions edge deletions for this batch update (undirected)
- * @param insertions edge insertions for this batch update (undirected)
- * @param vcom community each vertex belongs to
- * @returns flags for each vertex marking whether it is affected
- */
-template <class B, class G, class K, class V>
-inline void louvainAffectedVerticesFrontierOmpW(vector<B>& vertices, const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& vcom) {
-  fillValueOmpU(vertices, B());
-  size_t D = deletions.size();
-  size_t I = insertions.size();
-  #pragma omp parallel for schedule(auto)
-  for (size_t i=0; i<D; ++i) {
-    K u = get<0>(deletions[i]);
-    K v = get<1>(deletions[i]);
-    if (vcom[u] != vcom[v]) continue;
-    vertices[u]  = 1;
-  }
-  #pragma omp parallel for schedule(auto)
-  for (size_t i=0; i<I; ++i) {
-    K u = get<0>(insertions[i]);
-    K v = get<1>(insertions[i]);
-    if (vcom[u] == vcom[v]) continue;
-    vertices[u]  = 1;
-  }
-}
-#endif
-
-
-
-
-/**
- * Obtain the community membership of each vertex with Dynamic Frontier Louvain.
- * @param y updated graph
- * @param deletions edge deletions in batch update
- * @param insertions edge insertions in batch update
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainDynamicFrontier(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot) {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [&](auto& vaff, auto& vcs, auto& vcout, const auto& vcom, const auto& vtot, const auto& ctot) {
-    louvainAffectedVerticesFrontierW(vaff, y, deletions, insertions, vcom);
-  };
-  auto fa = [ ](auto u) { return true; };
-  return louvainInvoke<true, FLAG>(y, o, fi, fm, fa);
-}
-
-
-#ifdef OPENMP
-/**
- * Obtain the community membership of each vertex with Dynamic Frontier Louvain.
- * @param y updated graph
- * @param deletions edge deletions in batch update
- * @param insertions edge insertions in batch update
- * @param q initial community each vertex belongs to
- * @param qvtot initial total edge weight of each vertex
- * @param qctot initial total edge weight of each community
- * @param o louvain options
- * @returns louvain result
- */
-template <class FLAG=char, class G, class K, class V, class W>
-inline auto louvainDynamicFrontierOmp(const G& y, const vector<tuple<K, K, V>>& deletions, const vector<tuple<K, K, V>>& insertions, const vector<K>& q, const vector<W>& qvtot, const vector<W>& qctot, const LouvainOptions& o={}) {
-  vector2d<K> qs;
-  vector2d<W> qvtots, qctots;
-  louvainSetupInitialsW(qs, qvtots, qctots, q, qvtot, qctot, o.repeat);
-  int  r  = 0;
-  auto fi = [&](auto& vcom, auto& vtot, auto& ctot) {
-    vcom = move(qs[r]);
-    vtot = move(qvtots[r]);
-    ctot = move(qctots[r]); ++r;
-    louvainUpdateWeightsFromOmpU(vtot, ctot, y, deletions, insertions, vcom);
-  };
-  auto fm = [&](auto& vaff, auto& vcs, auto& vcout, const auto& vcom, const auto& vtot, const auto& ctot) {
-    louvainAffectedVerticesFrontierOmpW(vaff, y, deletions, insertions, vcom);
-  };
-  auto fa = [ ](auto u) { return true; };
-  return louvainInvokeOmp<true, FLAG>(y, o, fi, fm, fa);
+  return louvainInvokeOmp<false>(x, o, fi, fm, fa);
 }
 #endif
 #pragma endregion
