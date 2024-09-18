@@ -1139,7 +1139,7 @@ inline auto leidenInvoke(const G& x, const LeidenOptions& o, FI fi, FM fm, FA fa
           else         m += leidenMoveW<true>(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
         l += max(m, 1); ++p;
-        if (m<=1 || p>=P) break;
+        if (!isFirst && (m<=1 || p>=P)) break;
         size_t GN = isFirst? x.order() : y.order();
         size_t CN = 0;
         if (isFirst) CN = leidenCommunityExistsW(cv.degrees, x, ucom);
@@ -1265,7 +1265,7 @@ inline auto leidenInvokeOmp(const G& x, const LeidenOptions& o, FI fi, FM fm, FA
           else         m += leidenMoveOmpW<true>(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
         l += max(m, 1); ++p;
-        if (m<=1 || p>=P) break;
+        if (!isFirst && (m<=1 || p>=P)) break;
         size_t GN = isFirst? x.order() : y.order();
         size_t CN = 0;
         if (isFirst) CN = leidenCommunityExistsOmpW(cv.degrees, x, ucom);
