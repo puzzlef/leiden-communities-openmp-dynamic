@@ -1142,8 +1142,8 @@ inline auto leidenInvoke(const G& x, const LeidenOptions& o, FI fi, FM fm, FA fa
           else         m += leidenMoveW(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
         tr += measureDuration([&]() {
-          if (isFirst) copyValuesW(vcob, ucom);
-          else         copyValuesW(vcob, vcom);
+          if (isFirst) swap(vcob, ucom);  // copyValuesW(vcob.data(), ucom.data(), x.span());
+          else         swap(vcob, vcom);  // copyValuesW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeW(ucom, ctot, x, utot);
           else         leidenInitializeW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueU(vaff.data(), x.order(), B(1));
@@ -1268,8 +1268,8 @@ inline auto leidenInvokeOmp(const G& x, const LeidenOptions& o, FI fi, FM fm, FA
           else         m += leidenMoveOmpW(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
         tr += measureDuration([&]() {
-          if (isFirst) copyValuesOmpW(vcob, ucom);
-          else         copyValuesOmpW(vcob, vcom);
+          if (isFirst) swap(vcob, ucom);  // copyValuesOmpW(vcob.data(), ucom.data(), x.span());
+          else         swap(vcob, vcom);  // copyValuesOmpW(vcob.data(), vcom.data(), y.span());
           if (isFirst) leidenInitializeOmpW(ucom, ctot, x, utot);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
           // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
