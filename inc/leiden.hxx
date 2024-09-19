@@ -589,13 +589,17 @@ inline int leidenMoveW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vector
     el = W();
     x.forEachVertexKey([&](auto u) {
       K d = vcom[u];
-      if (!fa(u) || !vaff[u]) return;
-      if (REFINE && ctot[d]>vtot[u]) return;
+      if (!fa(u)) return;
+      if (!REFINE && !vaff[u]) return;
+      if ( REFINE && ctot[d]>vtot[u]) return;
       leidenClearScanW(vcs, vcout);
       leidenScanCommunitiesW<false, REFINE>(vcs, vcout, x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity(x, u, d, vtot, ctot, vcs, vcout, M, R);
-      if (c)      { leidenChangeCommunityW(vcom, ctot, x, u, d, c, vtot); x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); }); }
-      vaff[u] = B();
+      if (e) {
+        leidenChangeCommunityW(vcom, ctot, x, u, d, c, vtot);
+        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
+      }
+      if (!REFINE) vaff[u] = B();
       el += e;  // l1-norm
     });
     if (REFINE || fc(el, l++)) break;
@@ -657,13 +661,16 @@ inline int leidenMoveOmpW(vector<K>& vcom, vector<W>& ctot, vector<B>& vaff, vec
       int t = omp_get_thread_num();
       K   d = vcom[u];
       if (!x.hasVertex(u)) continue;
-      if (!fa(u) || !vaff[u]) continue;
-      if (REFINE && ctot[d]>vtot[u]) continue;
+      if (!fa(u)) continue;
+      if (!REFINE && !vaff[u]) continue;
+      if ( REFINE && ctot[d]>vtot[u]) continue;
       leidenClearScanW(*vcs[t], *vcout[t]);
       leidenScanCommunitiesW<false, REFINE>(*vcs[t], *vcout[t], x, u, vcom, vcob);
       auto [c, e] = leidenChooseCommunity(x, u, d, vtot, ctot, *vcs[t], *vcout[t], M, R);
-      if (c && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, d, c, vtot)) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
-      vaff[u] = B();
+      if (e && leidenChangeCommunityOmpW<REFINE>(vcom, ctot, x, u, d, c, vtot)) {
+        if (!REFINE) x.forEachEdgeKey(u, [&](auto v) { vaff[v] = B(1); });
+      }
+      if (!REFINE) vaff[u] = B();
       el += e;  // l1-norm
     }
     if (REFINE || fc(el, l++)) break;
@@ -1139,8 +1146,8 @@ inline auto leidenInvoke(const G& x, const LeidenOptions& o, FI fi, FM fm, FA fa
           else         copyValuesW(vcob, vcom);
           if (isFirst) leidenInitializeW(ucom, ctot, x, utot);
           else         leidenInitializeW(vcom, ctot, y, vtot);
-          if (isFirst) fillValueU(vaff.data(), x.order(), B(1));
-          else         fillValueU(vaff.data(), y.order(), B(1));
+          // if (isFirst) fillValueU(vaff.data(), x.order(), B(1));
+          // else         fillValueU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveW<true>(ucom, ctot, vaff, vcs, vcout, x, vcob, utot, M, R, L, fc);
           else         m += leidenMoveW<true>(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
@@ -1265,8 +1272,8 @@ inline auto leidenInvokeOmp(const G& x, const LeidenOptions& o, FI fi, FM fm, FA
           else         copyValuesOmpW(vcob, vcom);
           if (isFirst) leidenInitializeOmpW(ucom, ctot, x, utot);
           else         leidenInitializeOmpW(vcom, ctot, y, vtot);
-          if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
-          else         fillValueOmpU(vaff.data(), y.order(), B(1));
+          // if (isFirst) fillValueOmpU(vaff.data(), x.order(), B(1));
+          // else         fillValueOmpU(vaff.data(), y.order(), B(1));
           if (isFirst) m += leidenMoveOmpW<true>(ucom, ctot, vaff, vcs, vcout, x, vcob, utot, M, R, L, fc);
           else         m += leidenMoveOmpW<true>(vcom, ctot, vaff, vcs, vcout, y, vcob, vtot, M, R, L, fc);
         });
