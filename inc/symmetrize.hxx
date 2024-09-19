@@ -1,84 +1,71 @@
 #pragma once
+#include <memory>
+#include <tuple>
+#include <vector>
+#include <omp.h>
 #include "update.hxx"
+
+using std::unique_ptr;
+using std::tuple;
+using std::vector;
 
 
 
 
 #pragma region METHODS
 /**
- * Obtain the symmetric version of a graph.
- * @param a output symmetric graph (empty, updated)
- * @param x input graph
+ * Ensure that the graph is symmetric.
+ * @param a graph (updated)
  */
-template <class H, class G>
-inline void symmetrizeW(H& a, const G& x) {
-  a.reserve(x.span());
-  x.forEachVertex([&](auto u, auto d) { a.addVertex(u, d); });
-  x.forEachVertexKey([&](auto u) {
-    x.forEachEdge(u, [&](auto v, auto w) {
-      a.addEdge(u, v, w);
-      a.addEdge(v, u, w);
+template <class G>
+inline void symmetrizeU(G& a) {
+  using K = typename G::key_type;
+  using V = typename G::edge_value_type;
+  // Obtain the list of missing edges.
+  vector<tuple<K, K, V>> insertions;
+  a.forEachVertexKey([&](auto u) {
+    a.forEachEdgeKey(u, [&](auto v, auto w) {
+      if (a.hasEdge(v, u)) return;
+      insertions.emplace_back(v, u, w);
     });
   });
+  // Insert the missing edges.
+  for (const auto& [u, v, w] : insertions)
+    a.addEdge(u, v, w);
   a.update();
 }
 
 #ifdef OPENMP
 /**
- * Obtain the symmetric version of a graph in parallel.
- * @param a output symmetric graph (empty, updated)
- * @param x input graph
+ * Ensure that the graph is symmetric.
+ * @param a graph (updated)
  */
-template <class H, class G>
-inline void symmetrizeOmpW(H& a, const G& x) {
-  a.reserve(x.span());
-  x.forEachVertex([&](auto u, auto d) { a.addVertex(u, d); });
+template <class G>
+inline void symmetrizeOmpU(G& a) {
+  using K = typename G::key_type;
+  using V = typename G::edge_value_type;
+  // Obtain the list of missing edges.
+  size_t S = a.span();
+  int    T = omp_get_max_threads();
+  vector<unique_ptr<vector<tuple<K, K, V>>>> insertions(T);
+  for (int t=0; t<T; ++t)
+    insertions[t] = std::make_unique<vector<tuple<K, K, V>>>();
+  #pragma omp parallel for schedule(dynamic, 2048)
+  for (size_t u=0; u<S; ++u) {
+    int t = omp_get_thread_num();
+    a.forEachEdge(u, [&](auto v, auto w) {
+      if (a.hasEdge(v, u)) return;
+      insertions[t]->emplace_back(v, u, w);
+    });
+  }
   #pragma omp parallel
   {
-    x.forEachVertexKey([&](auto u) {
-      x.forEachEdge(u, [&](auto v, auto w) {
+    for (int t=0; t<T; ++t) {
+      for (const auto& [u, v, w] : *insertions[t])
         addEdgeOmpU(a, u, v, w);
-        addEdgeOmpU(a, v, u, w);
-      });
-    });
+    }
   }
   updateOmpU(a);
-}
-#endif
-
-
-/**
- * Obtain the symmetric version of a graph.
- * @param x input graph
- * @return symmetric graph
- */
-template <class G>
-inline auto symmetrize(const G& x) {
-  G a = x;
-  x.forEachVertexKey([&](auto u) {
-    x.forEachEdge(u, [&](auto v, auto w) { a.addEdge(v, u, w); });
-  });
-  a.update();
-  return a;
-}
-
-#ifdef OPENMP
-/**
- * Obtain the symmetric version of a graph in parallel.
- * @param x input graph
- * @return symmetric graph
- */
-template <class G>
-inline auto symmetrizeOmp(const G& x) {
-  G a = x;
-  #pragma omp parallel
-  {
-    x.forEachVertexKey([&](auto u) {
-      x.forEachEdge(u, [&](auto v, auto w) { addEdgeOmpU(a, v, u, w); });
-    });
-  }
-  updateOmpU(a);
-  return a;
 }
 #endif
 #pragma endregion

@@ -283,7 +283,7 @@ int main(int argc, char **argv) {
   LOG("Loading graph %s ...\n", file);
   DiGraph<K, None, V> x;
   readMtxOmpW(x, file, weighted); LOG(""); println(x);
-  if (!symmetric) { x = symmetrizeOmp(x); LOG(""); print(x); printf(" (symmetrize)\n"); }
+  if (!symmetric) { symmetrizeOmpU(x); LOG(""); print(x); printf(" (symmetrize)\n"); }
   runExperiment(x);
   printf("\n");
   return 0;
