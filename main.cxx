@@ -192,37 +192,28 @@ void runExperiment(const G& x) {
     );
   };
   // Get community memberships on original graph (static).
-  auto b0 = louvainStaticOmp(x, {5});
-  glog(b0, "louvainStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   auto c0 = leidenStaticOmp(x, {5});
   glog(c0, "leidenStaticOmpOriginal", MAX_THREADS, x, M, 0.0, 0.0);
   #if BATCH_LENGTH>1
-  vector<K> B2, B3, B4;
   vector<K> C2, C3, C4;
   vector<W> VW, CW;
   #else
-  const auto& B2 = b0.membership;
-  const auto& B3 = b0.membership;
-  const auto& B4 = b0.membership;
   const auto& C2 = c0.membership;
   const auto& C3 = c0.membership;
   const auto& C4 = c0.membership;
-  const auto& VW = b0.vertexWeight;
-  const auto& CW = b0.communityWeight;
+  const auto& VW = c0.vertexWeight;
+  const auto& CW = c0.communityWeight;
   #endif
   // Get community memberships on updated graph (dynamic).
   runBatches(x, rnd, [&](const auto& y, auto deletionsf, const auto& deletions, auto insertionsf, const auto& insertions, int sequence, int epoch) {
     double M = edgeWeightOmp(y)/2;
     #if BATCH_LENGTH>1
     if (sequence==0) {
-      B2 = b0.membership;
-      B3 = b0.membership;
-      B4 = b0.membership;
       C2 = c0.membership;
       C3 = c0.membership;
       C4 = c0.membership;
-      VW = b0.vertexWeight;
-      CW = b0.communityWeight;
+      VW = c0.vertexWeight;
+      CW = c0.communityWeight;
     }
     #endif
     // Adjust number of threads.
@@ -231,34 +222,23 @@ void runExperiment(const G& x) {
         glog(ans, technique, numThreads, y, M, deletionsf, insertionsf);
       };
       // Find static Louvain.
-      auto b1 = louvainStaticOmp(y, {repeat});
-      flog(b1, "louvainStaticOmp");
       auto c1 = leidenStaticOmp(y, {repeat});
       flog(c1, "leidenStaticOmp");
       // Find naive-dynamic Louvain.
-      auto b2 = louvainNaiveDynamicOmp(y, deletions, insertions, B2, VW, CW, {repeat});
-      flog(b2, "louvainNaiveDynamicOmp");
       auto c2 = leidenNaiveDynamicOmp(y, deletions, insertions, C2, VW, CW, {repeat});
       flog(c2, "leidenNaiveDynamicOmp");
       // Find delta-screening based dynamic Louvain.
-      auto b3 = louvainDynamicDeltaScreeningOmp(y, deletions, insertions, B3, VW, CW, {repeat});
-      flog(b3, "louvainDynamicDeltaScreeningOmp");
       auto c3 = leidenDynamicDeltaScreeningOmp(y, deletions, insertions, C3, VW, CW, {repeat});
       flog(c3, "leidenDynamicDeltaScreeningOmp");
       // Find frontier based dynamic Louvain.
-      auto b4 = louvainDynamicFrontierOmp(y, deletions, insertions, B4, VW, CW, {repeat});
-      flog(b4, "louvainDynamicFrontierOmp");
       auto c4 = leidenDynamicFrontierOmp(y, deletions, insertions, C4, VW, CW, {repeat});
       flog(c4, "leidenDynamicFrontierOmp");
       #if BATCH_LENGTH>1
-      B2 = b2.membership;
-      B3 = b3.membership;
-      B4 = b4.membership;
       C2 = c2.membership;
       C3 = c3.membership;
       C4 = c4.membership;
-      VW = b1.vertexWeight;
-      CW = b1.communityWeight;
+      VW = c1.vertexWeight;
+      CW = c1.communityWeight;
       #endif
     });
   });
